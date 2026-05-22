@@ -1,4 +1,7 @@
-QT += quick qml gui svg quickeffects bluetooth
+QT += quick qml gui svg quickeffects
+android {
+    QT += bluetooth
+}
 
 CONFIG += c++17
 

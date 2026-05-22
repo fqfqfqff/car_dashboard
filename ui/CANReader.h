@@ -1,18 +1,25 @@
 #pragma once
 
-#include <QBluetoothAddress>
-#include <QBluetoothDeviceDiscoveryAgent>
-#include <QBluetoothSocket>
-#include <QByteArray>
-#include <QList>
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QByteArray>
+#include <QList>
+
+#ifdef Q_OS_ANDROID
+#include <QBluetoothAddress>
+#include <QBluetoothDeviceDiscoveryAgent>
+#include <QBluetoothSocket>
 
 QT_BEGIN_NAMESPACE
 class QBluetoothDeviceInfo;
 class QTimer;
 QT_END_NAMESPACE
+#else
+QT_BEGIN_NAMESPACE
+class QTimer;
+QT_END_NAMESPACE
+#endif
 
 class DataModel;
 
@@ -62,14 +69,15 @@ signals:
     void frameCountChanged();
 
 private slots:
+#ifdef Q_OS_ANDROID
     void onSocketConnected();
     void onSocketDisconnected();
     void onSocketReadyRead();
     void onSocketError(QBluetoothSocket::SocketError error);
-
     void onDeviceDiscovered(const QBluetoothDeviceInfo &info);
     void onDiscoveryFinished();
     void onDiscoveryError(QBluetoothDeviceDiscoveryAgent::Error error);
+#endif
 
 private:
     enum class Phase {
@@ -82,6 +90,7 @@ private:
         Disconnecting
     };
 
+#ifdef Q_OS_ANDROID
     bool ensurePermissions();
     bool ensureDiscoveryPermissions();
     void continueConnectionFlow();
@@ -99,31 +108,40 @@ private:
     QList<QByteArray> extractFrames(const QStringList &lines) const;
     bool isCandidateDevice(const QBluetoothDeviceInfo &info) const;
     void applyPid(quint8 pid, const QByteArray &payload);
+#endif
+
     void setConnectedState(bool connected);
     void setStatus(const QString &text);
     QString adapterDisplayName() const;
     QString normalizedHexAddress(const QString &value) const;
 
     DataModel *m_model = nullptr;
+
+#ifdef Q_OS_ANDROID
     QBluetoothSocket *m_socket = nullptr;
     QBluetoothDeviceDiscoveryAgent *m_discoveryAgent = nullptr;
     QTimer *m_reconnectTimer = nullptr;
     QTimer *m_commandTimeoutTimer = nullptr;
     QTimer *m_pollTimer = nullptr;
+    QString m_rxBuffer;
+    QString m_pendingCommand;
+    int m_initIndex = 0;
+    int m_pollIndex = 0;
+    int m_consecutiveTimeouts = 0;
+    bool m_manualDisconnect = false;
+    bool m_connectRequested = false;
+    bool m_permissionRequestInFlight = false;
+    bool m_discoveryFallbackTried = false;
+#endif
 
     Phase m_phase = Phase::Idle;
     QString m_statusText = QStringLiteral("ELM327 not connected");
     QString m_adapterAddress;
     QString m_adapterName;
-    QString m_rxBuffer;
-    QString m_pendingCommand;
 
     int m_frameCount = 0;
     int m_pollIntervalMs = 120;
     int m_reconnectDelayMs = 3000;
-    int m_initIndex = 0;
-    int m_pollIndex = 0;
-    int m_consecutiveTimeouts = 0;
 
     bool m_connected = false;
 #ifdef Q_OS_ANDROID
@@ -131,8 +149,4 @@ private:
 #else
     bool m_autoConnect = false;
 #endif
-    bool m_manualDisconnect = false;
-    bool m_connectRequested = false;
-    bool m_permissionRequestInFlight = false;
-    bool m_discoveryFallbackTried = false;
 };
