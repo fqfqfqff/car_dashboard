@@ -1,6 +1,6 @@
 // =============================================================================
 // ControlsOverlay.qml — нижняя панель управления. v5.
-// Добавлена кнопка OBD в стиле OvBtn.
+// Добавлена кнопка CAN в стиле OvBtn.
 // =============================================================================
 
 import QtQuick 2.15
@@ -87,7 +87,7 @@ Item {
             onTriggered: controller.toggleCruise() }
     }
 
-    // ── РЯД 2: ТЕСТ-ИНДИКАТОРЫ + OBD ─────────────────────────────────────────
+    // ── РЯД 2: ТЕСТ-ИНДИКАТОРЫ + CAN ─────────────────────────────────────────
     Row {
         id: row2
         anchors.bottom:       parent.bottom
@@ -156,7 +156,7 @@ Item {
 
         Div {}
 
-        // ── OBD-кнопка ────────────────────────────────────────────────────────
+        // ── CAN-кнопка ────────────────────────────────────────────────────────
         // Зелёная когда подключён, синяя когда нет.
         // Статус отображается маленьким текстом под кнопкой.
         Item {
@@ -165,7 +165,7 @@ Item {
 
             OvBtn {
                 id: canBtn
-                label:       canReader.connected ? "OBD ●" : "OBD ○"
+                label:       canReader.connected ? "CAN ●" : "CAN ○"
                 baseColor:   canReader.connected ? "#000E06" : "#00080E"
                 activeColor: canReader.connected ? "#30D158" : "#0A84FF"
                 forceActive: canReader.connected
@@ -182,7 +182,7 @@ Item {
                 anchors.topMargin:        2
                 anchors.horizontalCenter: parent.horizontalCenter
                 text:    canReader.connected
-                         ? canReader.statusText + "  [" + canReader.frameCount + " pid]"
+                         ? canReader.statusText + "  [" + canReader.frameCount + " fr]"
                          : canReader.statusText
                 font.family:    "Microgramma"
                 font.pixelSize: 6

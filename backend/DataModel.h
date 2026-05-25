@@ -9,8 +9,6 @@ class DataModel : public QObject
     Q_PROPERTY(double rpm        READ rpm        WRITE setRpm        NOTIFY rpmChanged)
     Q_PROPERTY(double fuelLevel  READ fuelLevel  WRITE setFuelLevel  NOTIFY fuelLevelChanged)
     Q_PROPERTY(double engineTemp READ engineTemp WRITE setEngineTemp NOTIFY engineTempChanged)
-    Q_PROPERTY(double batteryVoltage READ batteryVoltage WRITE setBatteryVoltage NOTIFY batteryVoltageChanged)
-    Q_PROPERTY(double engineLoad READ engineLoad WRITE setEngineLoad NOTIFY engineLoadChanged)
 
     // Критические
     Q_PROPERTY(bool oilPressure  READ oilPressure  WRITE setOilPressure  NOTIFY oilPressureChanged)
@@ -55,8 +53,6 @@ public:
     double rpm()        const { return m_rpm; }
     double fuelLevel()  const { return m_fuelLevel; }
     double engineTemp() const { return m_engineTemp; }
-    double batteryVoltage() const { return m_batteryVoltage; }
-    double engineLoad() const { return m_engineLoad; }
     double odometer() const { return m_odometer; }
 
     bool brakeOverheat() const { return m_brakeOverheat; }
@@ -92,8 +88,6 @@ public:
     void setRpm(double v);
     void setFuelLevel(double v);
     void setEngineTemp(double v);
-    void setBatteryVoltage(double v);
-    void setEngineLoad(double v);
     void setEngineRunning(bool v);
     void   setOdometer(double v);
     void setBrakeOverheat(bool v);
@@ -128,8 +122,6 @@ signals:
     void rpmChanged();
     void fuelLevelChanged();
     void engineTempChanged();
-    void batteryVoltageChanged();
-    void engineLoadChanged();
     void oilPressureChanged();
     void overheatingChanged();
     void brakeSystemChanged();
@@ -164,8 +156,6 @@ private:
     double m_rpm        = 0.0;
     double m_fuelLevel  = 75.0;
     double m_engineTemp = 20.0;
-    double m_batteryVoltage = 12.4;
-    double m_engineLoad = 0.0;
     double m_odometer = 100.0; // начальное значение 100 км
 
     int m_currentGear = 0;

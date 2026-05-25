@@ -1,0 +1,12 @@
+debug/main.o
+debug/DataModel.o
+debug/Controller.o
+debug/Simulator.o
+debug/GaugeItem.o
+debug/CANReader.o
+debug/qrc_resources.o
+debug/moc_DataModel.o
+debug/moc_Controller.o
+debug/moc_Simulator.o
+debug/moc_GaugeItem.o
+debug/moc_CANReader.o

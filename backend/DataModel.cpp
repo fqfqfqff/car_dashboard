@@ -32,26 +32,6 @@ void DataModel::setEngineTemp(double v) {
     setOverheating(v > 108.0);
 }
 
-void DataModel::setBatteryVoltage(double v)
-{
-    v = qBound(0.0, v, 32.0);
-    if (qFuzzyCompare(m_batteryVoltage, v)) return;
-    m_batteryVoltage = v;
-    emit batteryVoltageChanged();
-
-    if (v > 0.0) {
-        setBatteryFault(v < 11.4 || v > 15.2);
-    }
-}
-
-void DataModel::setEngineLoad(double v)
-{
-    v = qBound(0.0, v, 100.0);
-    if (qFuzzyCompare(m_engineLoad, v)) return;
-    m_engineLoad = v;
-    emit engineLoadChanged();
-}
-
 #define BOOL_SETTER(Name, member, Signal) \
 void DataModel::set##Name(bool v) { \
         if (m_##member == v) return; \

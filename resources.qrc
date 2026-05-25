@@ -14,6 +14,8 @@
         <file>ui/BlinkController.qml</file>
         <file>ui/DesignSystem.qml</file>
         <file>ui/qmldir</file>
+        <file>ui/GaugeItem.cpp</file>
+        <file>ui/GaugeItem.h</file>
         <file>assets/fonts/Microgramma-Normal.ttf</file>
         <file>assets/fonts/Inter-Regular.ttf</file>
         <file>assets/fonts/Inter-Bold.ttf</file>
@@ -46,6 +48,8 @@
         <file>assets/icons/tpms.png</file>
         <file>assets/icons/fog.png</file>
         <file>assets/icons/red_power_steering.png</file>
+        <file>ui/CANReader.cpp</file>
+        <file>ui/CANReader.h</file>
         <file>ui/PanelOutline.qml</file>
     </qresource>
 </RCC>

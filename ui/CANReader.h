@@ -1,58 +1,98 @@
 #pragma once
 
 #include <QObject>
+#include <QThread>
+#include <QTimer>
+#include <QMutex>
 #include <QString>
-#include <QStringList>
-#include <QByteArray>
-#include <QList>
+#include <QAtomicInt>
 
-#ifdef Q_OS_ANDROID
-#include <QBluetoothAddress>
-#include <QBluetoothDeviceDiscoveryAgent>
-#include <QBluetoothSocket>
-
-QT_BEGIN_NAMESPACE
-class QBluetoothDeviceInfo;
-class QTimer;
-QT_END_NAMESPACE
-#else
-QT_BEGIN_NAMESPACE
-class QTimer;
-QT_END_NAMESPACE
-#endif
-
+// ─── Forward declarations ─────────────────────────────────────────────────────
 class DataModel;
 
+// ─── CAN Frame IDs (тестовая таблица, 11-bit standard) ───────────────────────
+// Меняй под свой ECU
+namespace CanID {
+static constexpr long SPEED       = 0x0B0;  // byte0-1: speed * 0.01 km/h  (uint16 big-endian)
+static constexpr long RPM         = 0x0C0;  // byte0-1: rpm * 0.25          (uint16 big-endian)
+static constexpr long ENGINE_TEMP = 0x130;  // byte0: temp + offset (-40°C) (uint8)
+static constexpr long FUEL_LEVEL  = 0x145;  // byte0: fuel 0-100%           (uint8)
+static constexpr long STATUS_1    = 0x200;  // byte0 bits: see below
+static constexpr long STATUS_2    = 0x201;  // byte0 bits: see below
+static constexpr long GEAR        = 0x210;  // byte0: gear 0-6
+
+// STATUS_1 byte0 bits
+static constexpr uint8_t BIT_CHECK_ENGINE  = 0x01;
+static constexpr uint8_t BIT_ABS_ACTIVE    = 0x02;
+static constexpr uint8_t BIT_ESP_ACTIVE    = 0x04;
+static constexpr uint8_t BIT_TPMS          = 0x08;
+static constexpr uint8_t BIT_FUEL_LOW      = 0x10;
+static constexpr uint8_t BIT_SEATBELT      = 0x20;
+static constexpr uint8_t BIT_TURN_LEFT     = 0x40;
+static constexpr uint8_t BIT_TURN_RIGHT    = 0x80;
+
+// STATUS_2 byte0 bits
+static constexpr uint8_t BIT_OIL_PRESSURE  = 0x01;
+static constexpr uint8_t BIT_OVERHEATING   = 0x02;
+static constexpr uint8_t BIT_BRAKE_SYSTEM  = 0x04;
+static constexpr uint8_t BIT_BATTERY_FAULT = 0x08;
+static constexpr uint8_t BIT_AIRBAG_FAULT  = 0x10;
+static constexpr uint8_t BIT_LOW_BEAM      = 0x20;
+static constexpr uint8_t BIT_HIGH_BEAM     = 0x40;
+static constexpr uint8_t BIT_FOG_LIGHTS    = 0x80;
+}
+
+// ─── Worker: живёт в отдельном QThread ───────────────────────────────────────
+class CANWorker : public QObject
+{
+    Q_OBJECT
+public:
+    explicit CANWorker(QObject *parent = nullptr);
+    ~CANWorker() override;
+
+public slots:
+    void connectDevice(int channel, int bitrate);
+    void disconnectDevice();
+    void poll();                    // вызывается по таймеру
+
+signals:
+    void frameReceived(long id, QByteArray data);
+    void connected();
+    void disconnected();
+    void errorOccurred(const QString &msg);
+
+private:
+    int    m_handle  = -1;          // canHandle
+    bool   m_open    = false;
+    QTimer *m_timer  = nullptr;
+
+    static constexpr int POLL_INTERVAL_MS = 10;
+    static constexpr int FRAMES_PER_POLL  = 64;
+};
+
+// ─── CANReader: публичный класс, экспортируется в QML ────────────────────────
 class CANReader : public QObject
 {
     Q_OBJECT
 
-    Q_PROPERTY(bool connected READ isConnected NOTIFY connectionChanged)
-    Q_PROPERTY(QString statusText READ statusText NOTIFY statusChanged)
-    Q_PROPERTY(QString adapterAddress READ adapterAddress WRITE setAdapterAddress NOTIFY adapterAddressChanged)
-    Q_PROPERTY(QString adapterName READ adapterName NOTIFY adapterNameChanged)
-    Q_PROPERTY(bool autoConnect READ autoConnect WRITE setAutoConnect NOTIFY autoConnectChanged)
-    Q_PROPERTY(int pollInterval READ pollInterval WRITE setPollInterval NOTIFY pollIntervalChanged)
-    Q_PROPERTY(int reconnectDelay READ reconnectDelay WRITE setReconnectDelay NOTIFY reconnectDelayChanged)
-    Q_PROPERTY(int frameCount READ frameCount NOTIFY frameCountChanged)
+    Q_PROPERTY(bool    connected  READ isConnected  NOTIFY connectionChanged)
+    Q_PROPERTY(QString statusText READ statusText   NOTIFY statusChanged)
+    Q_PROPERTY(int     channel    READ channel      WRITE setChannel    NOTIFY channelChanged)
+    Q_PROPERTY(int     bitrate    READ bitrate      WRITE setBitrate    NOTIFY bitrateChanged)
+    Q_PROPERTY(int     frameCount READ frameCount   NOTIFY frameCountChanged)
 
 public:
     explicit CANReader(DataModel *model, QObject *parent = nullptr);
     ~CANReader() override;
 
-    bool isConnected() const { return m_connected; }
-    QString statusText() const { return m_statusText; }
-    QString adapterAddress() const { return m_adapterAddress; }
-    QString adapterName() const { return m_adapterName; }
-    bool autoConnect() const { return m_autoConnect; }
-    int pollInterval() const { return m_pollIntervalMs; }
-    int reconnectDelay() const { return m_reconnectDelayMs; }
-    int frameCount() const { return m_frameCount; }
+    bool    isConnected() const;
+    QString statusText()  const;
+    int     channel()     const { return m_channel; }
+    int     bitrate()     const { return m_bitrate; }
+    int     frameCount()  const { return m_frameCount; }
 
-    void setAdapterAddress(const QString &value);
-    void setAutoConnect(bool value);
-    void setPollInterval(int value);
-    void setReconnectDelay(int value);
+    void    setChannel(int v);
+    void    setBitrate(int v);
 
 public slots:
     Q_INVOKABLE void connectDevice();
@@ -61,92 +101,29 @@ public slots:
 signals:
     void connectionChanged();
     void statusChanged();
-    void adapterAddressChanged();
-    void adapterNameChanged();
-    void autoConnectChanged();
-    void pollIntervalChanged();
-    void reconnectDelayChanged();
+    void channelChanged();
+    void bitrateChanged();
     void frameCountChanged();
 
 private slots:
-#ifdef Q_OS_ANDROID
-    void onSocketConnected();
-    void onSocketDisconnected();
-    void onSocketReadyRead();
-    void onSocketError(QBluetoothSocket::SocketError error);
-    void onDeviceDiscovered(const QBluetoothDeviceInfo &info);
-    void onDiscoveryFinished();
-    void onDiscoveryError(QBluetoothDeviceDiscoveryAgent::Error error);
-#endif
+    void onFrame(long id, QByteArray data);
+    void onConnected();
+    void onDisconnected();
+    void onError(const QString &msg);
 
 private:
-    enum class Phase {
-        Idle,
-        PermissionPending,
-        Discovering,
-        Connecting,
-        Initializing,
-        Polling,
-        Disconnecting
-    };
-
-#ifdef Q_OS_ANDROID
-    bool ensurePermissions();
-    bool ensureDiscoveryPermissions();
-    void continueConnectionFlow();
-    void startDiscovery();
-    void stopDiscovery();
-    void connectToDevice(const QBluetoothAddress &address, const QString &name);
-    void resetConnectionState(bool clearAdapter = false);
-    void scheduleReconnect(const QString &reason);
-    void sendCommand(const QString &command, int timeoutMs);
-    void sendNextInitCommand();
-    void sendNextPollCommand();
-    void handleResponseBlock(const QString &block);
-    void handleInitResponse(const QStringList &lines);
-    void handlePollResponse(const QStringList &lines);
-    QList<QByteArray> extractFrames(const QStringList &lines) const;
-    bool isCandidateDevice(const QBluetoothDeviceInfo &info) const;
-    void applyPid(quint8 pid, const QByteArray &payload);
-#endif
-
-    void setConnectedState(bool connected);
+    void decodeFrame(long id, const QByteArray &data);
     void setStatus(const QString &text);
-    QString adapterDisplayName() const;
-    QString normalizedHexAddress(const QString &value) const;
 
-    DataModel *m_model = nullptr;
+    DataModel  *m_model      = nullptr;
+    CANWorker  *m_worker     = nullptr;
+    QThread    *m_thread     = nullptr;
 
-#ifdef Q_OS_ANDROID
-    QBluetoothSocket *m_socket = nullptr;
-    QBluetoothDeviceDiscoveryAgent *m_discoveryAgent = nullptr;
-    QTimer *m_reconnectTimer = nullptr;
-    QTimer *m_commandTimeoutTimer = nullptr;
-    QTimer *m_pollTimer = nullptr;
-    QString m_rxBuffer;
-    QString m_pendingCommand;
-    int m_initIndex = 0;
-    int m_pollIndex = 0;
-    int m_consecutiveTimeouts = 0;
-    bool m_manualDisconnect = false;
-    bool m_connectRequested = false;
-    bool m_permissionRequestInFlight = false;
-    bool m_discoveryFallbackTried = false;
-#endif
+    bool        m_connected  = false;
+    QString     m_statusText = "Не подключён";
+    int         m_channel    = 0;       // Kvaser channel index (0-based)
+    int         m_bitrate    = 500000;  // 500 kbit/s по умолчанию
+    int         m_frameCount = 0;
 
-    Phase m_phase = Phase::Idle;
-    QString m_statusText = QStringLiteral("ELM327 not connected");
-    QString m_adapterAddress;
-    QString m_adapterName;
-
-    int m_frameCount = 0;
-    int m_pollIntervalMs = 120;
-    int m_reconnectDelayMs = 3000;
-
-    bool m_connected = false;
-#ifdef Q_OS_ANDROID
-    bool m_autoConnect = true;
-#else
-    bool m_autoConnect = false;
-#endif
+    mutable QMutex m_mutex;
 };

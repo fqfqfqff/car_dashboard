@@ -1,0 +1,12 @@
+release/main.o
+release/DataModel.o
+release/Controller.o
+release/Simulator.o
+release/GaugeItem.o
+release/CANReader.o
+release/qrc_resources.o
+release/moc_DataModel.o
+release/moc_Controller.o
+release/moc_Simulator.o
+release/moc_GaugeItem.o
+release/moc_CANReader.o

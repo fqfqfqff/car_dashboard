@@ -1,485 +1,315 @@
+pragma ComponentBehavior: Bound
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 
 Item {
     id: root
+    clip: true   // контент не выступает за границы
+
+    readonly property var dm:  (typeof dataModel !== "undefined" && dataModel !== null) ? dataModel : null
+    readonly property var sim: (typeof simulator  !== "undefined" && simulator  !== null) ? simulator : null
 
     property var  criticalLabels: []
     property bool hasCritical:    false
+    // Насколько дисплей заходит под гаджи — за этим краем фон скрыт
+    property real sideOverlap: 0
+
+    readonly property color speedColor: {
+        const s = root.dm ? root.dm.speed : 0
+        if (s > 240) return "#FF3B30"
+        if (s > 200) return "#FFB300"
+        if (s > 150) return "#FFCC00"
+        return "#EDF1F5"
+    }
 
     // ── ФОН ──────────────────────────────────────────────────────────────────
+    // Фон только в центральной видимой части (не под гаджами)
     Rectangle {
-        anchors.fill: parent
-        radius: 14
-        color:  "#0A0A10"
-
-        // Внешняя граница
-        border.color: "#1A1A28"
-        border.width: 1
-
-        // Внутреннее свечение по краю
-        Rectangle {
-            anchors.fill:    parent
-            anchors.margins: 1
-            radius:          parent.radius - 1
-            color:           "transparent"
-            border.color:    "#0F0F1C"
-            border.width:    1
+        x:      root.sideOverlap
+        y:      0
+        width:  root.width  - root.sideOverlap * 2
+        height: root.height
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "#181A1F" }
+            GradientStop { position: 0.5; color: "#111317" }
+            GradientStop { position: 1.0; color: "#0C0E12" }
         }
     }
 
-    // Верхняя декоративная красная полоса (как в Granta FL)
+    // Стеклянный блик
     Rectangle {
-        anchors.top:         parent.top
-        anchors.left:        parent.left
-        anchors.right:       parent.right
-        anchors.leftMargin:  parent.radius
-        anchors.rightMargin: parent.radius
-        height: root.height * 0.022
-        radius: 2
+        x:      root.sideOverlap
+        y:      0
+        width:  root.width  - root.sideOverlap * 2
+        height: root.height * 0.14
         gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0;  color: "transparent" }
-            GradientStop { position: 0.12; color: "#FF3B30" }
-            GradientStop { position: 0.88; color: "#FF3B30" }
-            GradientStop { position: 1.0;  color: "transparent" }
+            GradientStop { position: 0.0; color: "#2C3340" }
+            GradientStop { position: 0.5; color: "#1A1E28" }
+            GradientStop { position: 1.0; color: "transparent" }
         }
+        opacity: 0.50
+    }
+
+    // Верхняя граница (не доходит до краёв под гаджами)
+    Rectangle {
+        x:      root.sideOverlap
+        y:      0
+        width:  root.width  - root.sideOverlap * 2
+        height: 1
+        color:  "#4A5260"
         opacity: 0.75
     }
 
-    // Нижняя декоративная красная полоса
+    // Нижняя граница
     Rectangle {
-        anchors.bottom:      parent.bottom
-        anchors.left:        parent.left
-        anchors.right:       parent.right
-        anchors.leftMargin:  parent.radius
-        anchors.rightMargin: parent.radius
-        height: root.height * 0.022
-        radius: 2
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0;  color: "transparent" }
-            GradientStop { position: 0.12; color: "#FF3B30" }
-            GradientStop { position: 0.88; color: "#FF3B30" }
-            GradientStop { position: 1.0;  color: "transparent" }
-        }
-        opacity: 0.75
-    }
-
-    // Горизонтальный разделитель под хедером
-    Rectangle {
-        id: headerDivider
-        anchors.top:         headerZone.bottom
-        anchors.left:        parent.left
-        anchors.right:       parent.right
-        anchors.leftMargin:  parent.width * 0.06
-        anchors.rightMargin: parent.width * 0.06
+        x:      root.sideOverlap
+        y:      root.height - 1
+        width:  root.width  - root.sideOverlap * 2
         height: 1
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0;  color: "transparent" }
-            GradientStop { position: 0.25; color: "#FF3B30" }
-            GradientStop { position: 0.75; color: "#FF3B30" }
-            GradientStop { position: 1.0;  color: "transparent" }
-        }
-        opacity: 0.35
+        color:  "#3A424F"
+        opacity: 0.55
     }
 
-    // Горизонтальный разделитель над футером
-    Rectangle {
-        anchors.bottom:      footerZone.top
-        anchors.left:        parent.left
-        anchors.right:       parent.right
-        anchors.leftMargin:  parent.width * 0.06
-        anchors.rightMargin: parent.width * 0.06
-        height: 1
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0;  color: "transparent" }
-            GradientStop { position: 0.25; color: "#FF3B30" }
-            GradientStop { position: 0.75; color: "#FF3B30" }
-            GradientStop { position: 1.0;  color: "transparent" }
-        }
-        opacity: 0.35
-    }
-
-    // ── HEADER ───────────────────────────────────────────────────────────────
+    // ── ШАПКА ────────────────────────────────────────────────────────────────
     Item {
         id: headerZone
-        anchors.top:   parent.top
-        anchors.left:  parent.left
-        anchors.right: parent.right
-        height: root.height * 0.130
+        x:      root.sideOverlap
+        y:      0
+        width:  root.width  - root.sideOverlap * 2
+        height: root.height * 0.20
 
-        // Время
         Text {
-            id: clockText
             anchors.left:           parent.left
-            anchors.leftMargin:     root.width * 0.07
+            anchors.leftMargin:     parent.width * 0.08
             anchors.verticalCenter: parent.verticalCenter
             text: Qt.formatTime(new Date(), "hh:mm")
-            font.family:        "Microgramma"
-            font.pixelSize:     root.height * 0.040
-            font.letterSpacing: 0.5
-            color: "#C8C8D8"
-            Timer {
-                interval: 1000; running: true; repeat: true
-                onTriggered: clockText.text = Qt.formatTime(new Date(), "hh:mm")
-            }
+            font.family: "Microgramma"; font.pixelSize: root.height * 0.048
+            color: "#C8CDD4"
+            Timer { interval: 1000; running: true; repeat: true
+                onTriggered: parent.text = Qt.formatTime(new Date(), "hh:mm") }
         }
 
-        // ENGINE статус (центр)
-        Column {
+        Rectangle {
             anchors.centerIn: parent
-            spacing: 3
-
-            // Статусная точка + текст
-            Row {
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 6
-
-                Rectangle {
-                    width:  root.height * 0.018
-                    height: root.height * 0.018
-                    radius: width / 2
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: dataModel.engineRunning ? "#30D158" : "#2A2A3A"
-                    Behavior on color { ColorAnimation { duration: 400 } }
-
-                    // Пульсация при работе
-                    SequentialAnimation on opacity {
-                        loops: Animation.Infinite
-                        running: dataModel.engineRunning
-                        NumberAnimation { to: 0.4; duration: 900; easing.type: Easing.InOutSine }
-                        NumberAnimation { to: 1.0; duration: 900; easing.type: Easing.InOutSine }
-                        onStopped: parent.opacity = 1.0
-                    }
-                }
-
-                Text {
-                    text: dataModel.engineRunning ? "ENGINE ON" : "ENGINE OFF"
-                    font.family:        "Microgramma"
-                    font.pixelSize:     root.height * 0.032
-                    font.letterSpacing: 0.5
-                    color: dataModel.engineRunning ? "#30D158" : "#2E2E40"
-                    Behavior on color { ColorAnimation { duration: 400 } }
-                }
+            width: parent.width * 0.32; height: root.height * 0.080
+            radius: height / 2
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: root.dm && root.dm.engineRunning ? "#17311D" : "#221316" }
+                GradientStop { position: 1.0; color: root.dm && root.dm.engineRunning ? "#0C1710" : "#140C0E" }
+            }
+            border.width: 1
+            border.color: root.dm && root.dm.engineRunning ? "#30D158" : "#4A2A2F"
+            Text {
+                anchors.centerIn: parent
+                text: root.dm && root.dm.engineRunning ? "ENGINE ON" : "ENGINE OFF"
+                font.family: "Microgramma"; font.pixelSize: root.height * 0.030
+                color: root.dm && root.dm.engineRunning ? "#7EE39A" : "#8F6C71"
             }
         }
 
-        // Дата
         Text {
-            id: dateText
             anchors.right:          parent.right
-            anchors.rightMargin:    root.width * 0.07
+            anchors.rightMargin:    parent.width * 0.08
             anchors.verticalCenter: parent.verticalCenter
             text: Qt.formatDate(new Date(), "dd.MM")
-            font.family:        "Microgramma"
-            font.pixelSize:     root.height * 0.040
-            font.letterSpacing: 0.5
-            color: "#C8C8D8"
-            Timer {
-                interval: 60000; running: true; repeat: true
-                onTriggered: dateText.text = Qt.formatDate(new Date(), "dd.MM")
-            }
+            font.family: "Microgramma"; font.pixelSize: root.height * 0.048
+            color: "#C8CDD4"
+            Timer { interval: 60000; running: true; repeat: true
+                onTriggered: parent.text = Qt.formatDate(new Date(), "dd.MM") }
         }
     }
 
-    // ── CENTER ───────────────────────────────────────────────────────────────
+    // Разделитель под шапкой
+    Rectangle {
+        x:      root.sideOverlap + (root.width - root.sideOverlap * 2) * 0.07
+        y:      headerZone.y + headerZone.height
+        width:  (root.width - root.sideOverlap * 2) * 0.86
+        height: 1; color: "#242933"
+    }
+
+    // ── ЦЕНТРАЛЬНАЯ ЗОНА ──────────────────────────────────────────────────────
     Item {
         id: centerZone
-        anchors.top:          headerZone.bottom
-        anchors.bottom:       footerZone.top
-        anchors.left:         parent.left
-        anchors.right:        parent.right
-        anchors.topMargin:    root.height * 0.006
-        anchors.bottomMargin: root.height * 0.006
+        x:      root.sideOverlap
+        y:      headerZone.height
+        width:  root.width  - root.sideOverlap * 2
+        height: root.height - headerZone.height - footerZone.height
 
-        // ── Скорость крупно ──────────────────────────────────────────────────
-        Text {
-            id: speedText
+        // Cruise badge
+        Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter:   parent.verticalCenter
-            anchors.verticalCenterOffset: -root.height * 0.024
-
-            text: Math.round(dataModel.speed).toString()
-            font.family:    "Microgramma"
-            font.pixelSize: root.height * 0.200
-            font.weight:    Font.Bold
-
-            color: {
-                const s = dataModel.speed
-                if (s > 240) return "#FF3B30"
-                if (s > 200) return "#FFB300"
-                if (s > 150) return "#FFCC00"
-                return "#FFFFFF"
+            anchors.top: parent.top; anchors.topMargin: root.height * 0.018
+            width: parent.width * 0.38; height: root.height * 0.066; radius: 8
+            visible: root.dm ? root.dm.cruiseActive : false
+            opacity: visible ? 1.0 : 0.0
+            Behavior on opacity { NumberAnimation { duration: 220 } }
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: "#15261C" }
+                GradientStop { position: 1.0; color: "#0C1511" }
             }
-            Behavior on color { ColorAnimation { duration: 350 } }
-
-            opacity: root.hasCritical ? 0.0 : 1.0
-            Behavior on opacity { NumberAnimation { duration: 220 } }
-        }
-
-        // km/h подпись
-        Text {
-            anchors.top:              speedText.bottom
-            anchors.topMargin:        -root.height * 0.006
-            anchors.horizontalCenter: parent.horizontalCenter
-            text:               "km/h"
-            font.family:        "Microgramma"
-            font.pixelSize:     root.height * 0.030
-            font.letterSpacing: 4.5
-            color:              "#252535"
-            opacity: root.hasCritical ? 0.0 : 1.0
-            Behavior on opacity { NumberAnimation { duration: 220 } }
-        }
-
-        // Круиз-контроль
-        Row {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top:              speedText.top
-            anchors.topMargin:        -root.height * 0.048
-            spacing: 8
-            opacity: (dataModel.cruiseActive && !root.hasCritical) ? 1.0 : 0.0
-            Behavior on opacity { NumberAnimation { duration: 280 } }
-
-            Rectangle {
-                width:  cruiseRow.implicitWidth + 20
-                height: cruiseRow.implicitHeight + 10
-                radius: height / 2
-                color:  "#001A08"
-                border.color: "#30D158"
-                border.width: 1
-                anchors.verticalCenter: parent.verticalCenter
-
-                Row {
-                    id: cruiseRow
-                    anchors.centerIn: parent
-                    spacing: 8
-
-                    Text {
-                        text: "CC"
-                        font.family:        "Microgramma"
-                        font.pixelSize:     root.height * 0.026
-                        color:              "#30D158"
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Text {
-                        text: {
-                            if (typeof simulator !== "undefined" && simulator.cruiseTarget > 0)
-                                return Math.round(simulator.cruiseTarget) + " km/h"
-                            return ""
-                        }
-                        font.family:    "Microgramma"
-                        font.pixelSize: root.height * 0.026
-                        color:          "#50D888"
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
+            border.width: 1; border.color: "#2C4E39"
+            Row {
+                anchors.centerIn: parent; spacing: parent.width * 0.06
+                Text { text: "CRUISE"; font.family: "Microgramma"; font.pixelSize: root.height * 0.024; color: "#77D596" }
+                Text {
+                    text: (root.sim && root.sim.cruiseTarget > 0) ? Math.round(root.sim.cruiseTarget) + " km/h" : "HOLD"
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.024; color: "#B7F1C9"
                 }
             }
         }
 
-        // ── Критические ошибки (перекрывает скорость) ────────────────────────
-        Rectangle {
-            id: critOverlay
+        // Скорость
+        Column {
             anchors.centerIn: parent
-            anchors.verticalCenterOffset: -root.height * 0.010
-            width:  parent.width * 0.86
-            height: Math.min(
-                        critList.contentHeight + root.height * 0.090,
-                        parent.height * 0.94
-                    )
-            radius: 10
-            color:        Qt.rgba(0.90, 0.08, 0.04, 0.08)
-            border.color: "#FF3B30"
-            border.width: 1
-            opacity: root.hasCritical ? 1.0 : 0.0
-            visible: opacity > 0.01
-
-            SequentialAnimation {
-                loops: Animation.Infinite
-                running: root.hasCritical
-                NumberAnimation { target: critOverlay; property: "opacity"; from: 1.0; to: 0.28; duration: 480; easing.type: Easing.InOutQuad }
-                NumberAnimation { target: critOverlay; property: "opacity"; from: 0.28; to: 1.0; duration: 480; easing.type: Easing.InOutQuad }
-            }
-
-            Rectangle {
-                anchors.top:         parent.top
-                anchors.left:        parent.left
-                anchors.right:       parent.right
-                anchors.leftMargin:  parent.radius
-                anchors.rightMargin: parent.radius
-                height: 2; radius: 1
-                color: "#FF3B30"; opacity: 0.50
-            }
+            spacing: -root.height * 0.006
+            opacity: root.hasCritical ? 0.0 : 1.0
+            Behavior on opacity { NumberAnimation { duration: 220 } }
 
             Text {
-                anchors.top:              parent.top
-                anchors.topMargin:        root.height * 0.010
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "⚠"
-                font.pixelSize: root.height * 0.042
-                color: "#FF3B30"; opacity: 0.72
+                text: Math.round(root.dm ? root.dm.speed : 0).toString()
+                font.family: "Microgramma"; font.pixelSize: root.height * 0.26
+                color: root.speedColor; horizontalAlignment: Text.AlignHCenter
+                Behavior on color { ColorAnimation { duration: 250 } }
             }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "KM/H"
+                font.family: "Microgramma"; font.pixelSize: root.height * 0.030
+                font.letterSpacing: 4.2; color: "#4B525D"
+                horizontalAlignment: Text.AlignHCenter
+            }
+        }
 
+        // Критическое предупреждение
+        Rectangle {
+            anchors.centerIn: parent
+            width: parent.width * 0.86
+            height: Math.min(critList.contentHeight + root.height * 0.10, parent.height * 0.88)
+            radius: 14; visible: root.hasCritical
+            opacity: root.hasCritical ? 1.0 : 0.0
+            color: "#220908"; border.width: 1; border.color: "#A52A23"
+            SequentialAnimation on opacity {
+                running: root.hasCritical; loops: Animation.Infinite
+                NumberAnimation { from: 1.0;  to: 0.45; duration: 500; easing.type: Easing.InOutQuad }
+                NumberAnimation { from: 0.45; to: 1.0;  duration: 500; easing.type: Easing.InOutQuad }
+            }
+            Rectangle {
+                anchors { left: parent.left; right: parent.right; top: parent.top }
+                anchors.leftMargin: parent.radius; anchors.rightMargin: parent.radius
+                height: 2; radius: 1; color: "#FF3B30"; opacity: 0.45
+            }
+            Image {
+                anchors.top: parent.top; anchors.topMargin: root.height * 0.012
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: root.height * 0.042; height: width
+                source: "qrc:/assets/icons/red_triangle.png"
+                fillMode: Image.PreserveAspectFit; smooth: true; opacity: 0.78
+            }
             ListView {
                 id: critList
-                anchors.top:          parent.top
-                anchors.topMargin:    root.height * 0.068
-                anchors.bottom:       parent.bottom
-                anchors.bottomMargin: root.height * 0.010
-                anchors.left:         parent.left
-                anchors.right:        parent.right
-                clip: true
+                anchors { top: parent.top; bottom: parent.bottom; left: parent.left; right: parent.right }
+                anchors.topMargin: root.height * 0.075; anchors.bottomMargin: root.height * 0.020
+                clip: true; spacing: root.height * 0.008
                 model: root.criticalLabels
-                spacing: root.height * 0.005
-
                 delegate: Text {
-                    width: critList.width
+                    width: critList.width; text: modelData
                     horizontalAlignment: Text.AlignHCenter
-                    text:               modelData
-                    font.family:        "Microgramma"
-                    font.pixelSize:     root.height * 0.036
-                    font.letterSpacing: 1.2
-                    color:              "#FF5A4E"
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.034; color: "#FF6E64"
                 }
+            }
+        }
+
+        // Фары + поворотники внизу центра
+        Item {
+            anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+            height: root.height * 0.14
+
+            Rectangle {
+                anchors { left: parent.left; right: parent.right; top: parent.top }
+                anchors.leftMargin: parent.width * 0.07; anchors.rightMargin: parent.width * 0.07
+                height: 1; color: "#242933"
+            }
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top; anchors.topMargin: root.height * 0.012
+                spacing: parent.width * 0.05
+                Image { width: root.height*0.050; height: width; source: "qrc:/assets/icons/low_beam.png";  fillMode: Image.PreserveAspectFit; visible: root.dm ? root.dm.lowBeam  : false }
+                Image { width: root.height*0.050; height: width; source: "qrc:/assets/icons/high_beam.png"; fillMode: Image.PreserveAspectFit; visible: root.dm ? root.dm.highBeam : false }
+                Image { width: root.height*0.050; height: width; source: "qrc:/assets/icons/fog.png";       fillMode: Image.PreserveAspectFit; visible: root.dm ? root.dm.fogLights: false }
+            }
+            TurnSignals {
+                anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+                anchors.bottomMargin: root.height * 0.008
+                anchors.leftMargin:   parent.width * 0.06
+                anchors.rightMargin:  parent.width * 0.06
+                height: parent.height * 0.45
             }
         }
     }
 
-    // ── FOOTER ───────────────────────────────────────────────────────────────
+    // ── ПОДВАЛ ────────────────────────────────────────────────────────────────
     Item {
         id: footerZone
-        anchors.bottom: parent.bottom
-        anchors.left:   parent.left
-        anchors.right:  parent.right
-        height: root.height * 0.175
+        x:      root.sideOverlap
+        y:      root.height - height
+        width:  root.width  - root.sideOverlap * 2
+        height: root.height * 0.22
 
-        // Пробег
-        Column {
-            anchors.left:           parent.left
-            anchors.leftMargin:     root.width * 0.07
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 2
-
-            Text {
-                text: Math.round(dataModel.odometer).toLocaleString(Qt.locale("en_US"), "f", 0)
-                font.family:    "Microgramma"
-                font.pixelSize: root.height * 0.052
-                color:          "#A8A8C0"
-            }
-            Text {
-                text: "KM"
-                font.family:        "Microgramma"
-                font.pixelSize:     root.height * 0.020
-                font.letterSpacing: 0.5
-                color:              "#242436"
-            }
+        Rectangle {
+            anchors { left: parent.left; right: parent.right; top: parent.top }
+            anchors.leftMargin: parent.width * 0.07; anchors.rightMargin: parent.width * 0.07
+            height: 1; color: "#242933"
         }
 
-        // Температура (центр)
-        Column {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter:   parent.verticalCenter
-            spacing: 4
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: parent.width * 0.07; anchors.rightMargin: parent.width * 0.07
+            anchors.topMargin: root.height * 0.012; anchors.bottomMargin: root.height * 0.012
+            spacing: parent.width * 0.04
 
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: Math.round(dataModel.engineTemp) + "°"
-                font.family:    "Microgramma"
-                font.pixelSize: root.height * 0.052
-                font.weight:    Font.Bold
-                color: _tempColor
-                Behavior on color { ColorAnimation { duration: 500 } }
-
-                readonly property color _tempColor: {
-                    const t = dataModel.engineTemp
-                    if (t < 60)  return "#4A8FD4"
-                    if (t < 90)  return "#30D158"
-                    if (t < 110) return "#FFCC00"
-                    return "#FF3B30"
+            Column {
+                Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; spacing: 2
+                Text {
+                    text: Math.round(root.dm ? root.dm.odometer : 0).toLocaleString(Qt.locale("en_US"), "f", 0)
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.052; color: "#C7CDD4"
                 }
+                Text { text: "ODO KM"; font.family: "Microgramma"; font.pixelSize: root.height * 0.020; color: "#4B525D" }
             }
 
-            // Температурный бар
-            Item {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width:  root.width * 0.20
-                height: root.height * 0.016
-
-                Rectangle {
-                    anchors.fill: parent; radius: height / 2
-                    color: "#0C0C18"; border.color: "#181828"; border.width: 1
+            Column {
+                Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter; spacing: 5
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Math.round(root.dm ? root.dm.engineTemp : 0) + "\u00B0"
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.054
+                    color: { const t = root.dm ? root.dm.engineTemp : 0; return t<60?"#4A8FD4":t<90?"#30D158":t<110?"#FFCC00":"#FF3B30" }
                 }
-                Rectangle {
-                    anchors.left:    parent.left
-                    anchors.top:     parent.top
-                    anchors.bottom:  parent.bottom
-                    anchors.margins: 2
-                    radius: height / 2
-
-                    readonly property real _norm: {
-                        const t = dataModel.engineTemp
-                        if (t <= 20)  return 0.0
-                        if (t >= 130) return 1.0
-                        return (t - 20.0) / 110.0
+                Item {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: parent.parent.width * 0.60; height: root.height * 0.020
+                    Rectangle { anchors.fill: parent; radius: height/2; color: "#0B0D11"; border.width: 1; border.color: "#232933" }
+                    Rectangle {
+                        anchors { left: parent.left; top: parent.top; bottom: parent.bottom; margins: 2 }
+                        radius: height / 2
+                        readonly property real tempNorm: { const t = root.dm ? root.dm.engineTemp : 0; return t<=20?0.0:t>=130?1.0:(t-20.0)/110.0 }
+                        width: Math.max(height - 2, (parent.width - 4) * tempNorm)
+                        color: { const t = root.dm ? root.dm.engineTemp : 0; return t<60?"#4A8FD4":t<85?"#30D158":t<110?"#FFCC00":"#FF3B30" }
+                        Behavior on width { NumberAnimation { duration: 420; easing.type: Easing.OutQuad } }
+                        Behavior on color { ColorAnimation  { duration: 320 } }
                     }
-                    width: Math.max(radius * 2, (parent.width - 4) * _norm)
-                    Behavior on width { NumberAnimation { duration: 600; easing.type: Easing.OutQuad } }
-
-                    color: {
-                        const t = dataModel.engineTemp
-                        if (t < 60)  return "#4A8FD4"
-                        if (t < 85)  return "#30D158"
-                        if (t < 110) return "#FFCC00"
-                        return "#FF3B30"
-                    }
-                    Behavior on color { ColorAnimation { duration: 500 } }
-                }
-
-                // Маркер нормы 90°
-                Rectangle {
-                    anchors.verticalCenter: parent.verticalCenter
-                    x:      parent.width * ((88.0 - 20.0) / 110.0) - 0.8
-                    width:  1.5; height: parent.height * 0.72
-                    color:  "#282840"; radius: 1
                 }
             }
-        }
 
-        // Расход топлива
-        Column {
-            anchors.right:          parent.right
-            anchors.rightMargin:    root.width * 0.07
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 2
-
-            Text {
-                anchors.right: parent.right
-                text: {
-                    if (!dataModel.engineRunning) return "- - -"
-                    if (typeof simulator !== "undefined" && simulator.fuelAvg > 0)
-                        return simulator.fuelAvg.toFixed(1)
-                    return "0.0"
+            Column {
+                Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter | Qt.AlignRight; spacing: 2
+                Text {
+                    anchors.right: parent.right
+                    text: { if (!(root.dm && root.dm.engineRunning)) return "- - -"; return ((root.sim ? root.sim.fuelAvg : 0) > 0) ? (root.sim.fuelAvg).toFixed(1) : "0.0" }
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.052
+                    color: { if (!(root.dm && root.dm.engineRunning)) return "#4B525D"; const f = root.sim ? root.sim.fuelAvg : 0; return f>15?"#FF3B30":f>10?"#FFCC00":"#C7CDD4" }
                 }
-                font.family:    "Microgramma"
-                font.pixelSize: root.height * 0.052
-                color: {
-                    if (!dataModel.engineRunning) return "#222232"
-                    const f = (typeof simulator !== "undefined") ? simulator.fuelAvg : 0
-                    if (f > 15) return "#FF3B30"
-                    if (f > 10) return "#FFCC00"
-                    return "#A8A8C0"
-                }
-                Behavior on color { ColorAnimation { duration: 400 } }
-            }
-            Text {
-                anchors.right: parent.right
-                text: !dataModel.engineRunning ? "РАСХОД" : "СР.Л/100"
-                font.family:        "Microgramma"
-                font.pixelSize:     root.height * 0.020
-                font.letterSpacing: 0.3
-                color:              "#242436"
+                Text { anchors.right: parent.right; text: root.dm && root.dm.engineRunning ? "AVG L/100" : "FUEL AVG"; font.family: "Microgramma"; font.pixelSize: root.height * 0.020; color: "#4B525D" }
             }
         }
     }

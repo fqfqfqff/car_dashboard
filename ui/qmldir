@@ -1,11 +1,13 @@
 # qmldir — регистрация модулей UI
+# Помести этот файл в папку ui/
 
-singleton DesignSystem    1.0 DesignSystem.qml
+singleton DesignSystem 1.0 DesignSystem.qml
 singleton BlinkController 1.0 BlinkController.qml
 
-Gauge           1.0 Gauge.qml
-Dashboard       1.0 Dashboard.qml
-Display         1.0 Display.qml
-IndicatorPanel  1.0 IndicatorPanel.qml
+Gauge 1.0 Gauge.qml
+Dashboard 1.0 Dashboard.qml
+Display 1.0 Display.qml
+WarningStrip 1.0 WarningStrip.qml
+HeadlightStrip 1.0 HeadlightStrip.qml
+TurnSignals 1.0 TurnSignals.qml
 ControlsOverlay 1.0 ControlsOverlay.qml
-PanelOutline    1.0 PanelOutline.qml

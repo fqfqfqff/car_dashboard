@@ -1,3 +1,7 @@
+// PanelOutline.qml — контур кластера. v7.
+// Читает gaugeSize / gaugeCY / gaugeMarH из родителя (Dashboard).
+// Все координаты выведены из единой системы — нет рассинхрона с гаджами.
+
 import QtQuick 2.15
 
 Canvas {
@@ -5,106 +9,82 @@ Canvas {
     anchors.fill: parent
     z: 10
 
-    readonly property real gs:  parent.gaugeSize
-    readonly property real gcx: gs / 2 + parent.width * 0.004
-    readonly property real grx: parent.width - gs / 2 - parent.width * 0.004
-    readonly property real gcy: {
-        var topH   = parent.height * 0.068
-        var botH   = parent.height * 0.072 + parent.height * 0.132 + parent.height * 0.013
-        return topH + (parent.height - topH - botH) / 2
-    }
+    // Читаем из Dashboard
+    readonly property real gs:    (parent && parent["gaugeSize"]  !== undefined) ? parent["gaugeSize"]  : 0
+    readonly property real gCY:   (parent && parent["gaugeCY"]    !== undefined) ? parent["gaugeCY"]    : height * 0.44
+    readonly property real gmH:   (parent && parent["gaugeMarH"]  !== undefined) ? parent["gaugeMarH"]  : width  * 0.010
+    readonly property real rpmN:  (parent && parent["rpmNorm"]    !== undefined) ? parent["rpmNorm"]    : 0.0
 
-    readonly property real rpmNorm: parent.rpmNorm !== undefined ? parent.rpmNorm : 0.0
+    // Центры гаджей
+    readonly property real lCX: gmH + gs / 2
+    readonly property real rCX: width - gmH - gs / 2
 
-    onWidthChanged:  requestPaint()
-    onHeightChanged: requestPaint()
-    onRpmNormChanged: requestPaint()
+    onWidthChanged:   requestPaint()
+    onHeightChanged:  requestPaint()
+    onGsChanged:      requestPaint()
+    onGCYChanged:     requestPaint()
+    onRpmNChanged:    requestPaint()
 
     onPaint: {
-        var ctx = getContext("2d")
+        const ctx = getContext("2d")
         ctx.clearRect(0, 0, width, height)
+        if (gs < 10) return
 
-        var W      = width
-        var H      = height
-        var semiR  = gs * 0.505
-        var leftCX = gcx
-        var rightCX = grx
-        var midCY  = gcy
+        const r        = gs * 0.505
+        const midX     = width / 2
+        // Контрольные точки кривых Безье: соединяем верхние/нижние точки дуг
+        const topCtrlY = gCY - r - height * 0.042
+        const botCtrlY = gCY + r - height * 0.010
 
-        // Контрольные точки для плавных дуг
-        var topBulge = midCY - semiR - H * 0.08
-        var botBulge = midCY + semiR - H * 0.06
-        var midX     = W / 2
+        // Тень снаружи
+        traceOutline(ctx, r + 18, topCtrlY, botCtrlY, midX, "rgba(0,0,0,0.55)",     24)
+        // Основная тёмная рамка
+        traceOutline(ctx, r + 6,  topCtrlY, botCtrlY, midX, "rgba(18,21,27,0.98)",  11)
+        // Светлый edge (металл)
+        traceOutline(ctx, r + 1,  topCtrlY, botCtrlY, midX, "rgba(72,80,92,0.88)",  1.8)
+        // Внутренняя тень
+        traceOutline(ctx, r - 4,  topCtrlY, botCtrlY, midX, "rgba(6,7,10,0.97)",    3.5)
 
-        // ── Слой 1: широкая тень под рамкой ──────────────────────────────────
-        ctx.save()
-        ctx.beginPath()
-        _tracePath(ctx, leftCX, rightCX, midCY, semiR, topBulge, botBulge, midX, 6)
-        ctx.strokeStyle = "rgba(0,0,0,0.65)"
-        ctx.lineWidth   = 12
-        ctx.lineJoin    = "round"
-        ctx.lineCap     = "round"
-        ctx.stroke()
-        ctx.restore()
-
-        // ── Слой 2: тёмно-графитовый корпус (толстый) ────────────────────────
-        ctx.save()
-        ctx.beginPath()
-        _tracePath(ctx, leftCX, rightCX, midCY, semiR, topBulge, botBulge, midX, 3)
-        ctx.strokeStyle = "rgba(22,23,30,0.95)"
-        ctx.lineWidth   = 8
-        ctx.lineJoin    = "round"
-        ctx.lineCap     = "round"
-        ctx.stroke()
-        ctx.restore()
-
-        // ── Слой 3: хромовая линия (внешний блик) ────────────────────────────
-        ctx.save()
-        ctx.beginPath()
-        _tracePath(ctx, leftCX, rightCX, midCY, semiR, topBulge, botBulge, midX, 1)
-        var glowAlpha = 0.55 + rpmNorm * 0.25
-        ctx.strokeStyle = "rgba(100,102,115," + glowAlpha + ")"
-        ctx.lineWidth   = 1.8
-        ctx.lineJoin    = "round"
-        ctx.lineCap     = "round"
-        ctx.stroke()
-        ctx.restore()
-
-        // ── Слой 4: внутренняя тёмная линия (граница рамка/циферблат) ─────────
-        ctx.save()
-        ctx.beginPath()
-        _tracePath(ctx, leftCX, rightCX, midCY, semiR, topBulge, botBulge, midX, -3)
-        ctx.strokeStyle = "rgba(4,4,8,0.90)"
-        ctx.lineWidth   = 3.5
-        ctx.lineJoin    = "round"
-        ctx.lineCap     = "round"
-        ctx.stroke()
-        ctx.restore()
-
-        // ── Слой 5: подсветка от приборов (красный ambient при работающем ДВС) ─
-        if (rpmNorm > 0.05) {
-            ctx.save()
-            ctx.beginPath()
-            _tracePath(ctx, leftCX, rightCX, midCY, semiR, topBulge, botBulge, midX, 0)
-            ctx.strokeStyle = "rgba(255,59,48," + (rpmNorm * 0.18).toFixed(3) + ")"
-            ctx.lineWidth   = 14
-            ctx.lineJoin    = "round"
-            ctx.lineCap     = "round"
-            ctx.stroke()
-            ctx.restore()
+        // Подсветка от оборотов
+        if (rpmN > 0.02) {
+            traceOutline(
+                ctx, r, topCtrlY, botCtrlY, midX,
+                "rgba(255,59,48," + (0.06 + rpmN * 0.22).toFixed(3) + ")",
+                14
+            )
         }
+
+        // Лёгкая атмосферная заливка внутри
+        const fill = ctx.createLinearGradient(0, gCY - r, 0, gCY + r)
+        fill.addColorStop(0.0,  "rgba(32,36,44,0.16)")
+        fill.addColorStop(0.45, "rgba(10,12,16,0.04)")
+        fill.addColorStop(1.0,  "rgba(255,59,48," + (rpmN * 0.05).toFixed(3) + ")")
+        ctx.save()
+        ctx.beginPath()
+        clusterPath(ctx, r - 7, topCtrlY, botCtrlY, midX)
+        ctx.fillStyle = fill
+        ctx.fill()
+        ctx.restore()
     }
 
-    // Вспомогательная функция трассировки контура (offset = смещение от базового контура)
-    function _tracePath(ctx, leftCX, rightCX, midCY, semiR, topBulge, botBulge, midX, offset) {
-        var r = semiR + offset
-        if (r < 1) r = 1
+    function traceOutline(ctx, radius, topCtrlY, botCtrlY, midX, strokeStyle, lineWidth) {
+        ctx.save()
+        ctx.beginPath()
+        clusterPath(ctx, radius, topCtrlY, botCtrlY, midX)
+        ctx.strokeStyle = strokeStyle
+        ctx.lineWidth   = lineWidth
+        ctx.lineJoin    = "round"
+        ctx.lineCap     = "round"
+        ctx.stroke()
+        ctx.restore()
+    }
 
-        ctx.moveTo(leftCX, midCY - r)
-        ctx.quadraticCurveTo(midX, topBulge - offset * 0.5, rightCX, midCY - r)
-        ctx.arc(rightCX, midCY, r, -Math.PI / 2, Math.PI / 2, false)
-        ctx.quadraticCurveTo(midX, botBulge - offset * 0.5, leftCX, midCY + r)
-        ctx.arc(leftCX, midCY, r, Math.PI / 2, -Math.PI / 2, false)
+    function clusterPath(ctx, radius, topCtrlY, botCtrlY, midX) {
+        ctx.moveTo(lCX, gCY - radius)
+        ctx.quadraticCurveTo(midX, topCtrlY, rCX, gCY - radius)
+        ctx.arc(rCX, gCY, radius, -Math.PI / 2,  Math.PI / 2, false)
+        ctx.quadraticCurveTo(midX, botCtrlY, lCX, gCY + radius)
+        ctx.arc(lCX, gCY, radius,  Math.PI / 2, -Math.PI / 2, false)
         ctx.closePath()
     }
 }
