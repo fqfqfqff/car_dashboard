@@ -1,4 +1,4 @@
-# CarDashboard — Приборная панель Audi RS5 Style
+# CarDashboard — Приборная панель
 Qt 6.5+ | QML | C++ | QPainter | macOS
 
 ---
@@ -27,18 +27,6 @@ CarDashboard/
     ├── fonts/                  — Inter-Regular/Bold/SemiBold.ttf (скачать)
     └── icons/                  — SVG иконки (уже включены)
 ```
-
----
-
-## Установка шрифтов
-
-1. Перейди на https://fonts.google.com/specimen/Inter
-2. Скачай: Inter Regular (400), SemiBold (600), Bold (700)
-3. Переименуй файлы точно так:
-   - `Inter-Regular.ttf`
-   - `Inter-SemiBold.ttf`
-   - `Inter-Bold.ttf`
-4. Положи в папку `assets/fonts/`
 
 ---
 
