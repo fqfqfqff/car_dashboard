@@ -1,4 +1,4 @@
-# CarDashboard — Приборная панель Audi RS5 Style
+# CarDashboard — Приборная панель
 Qt 6.5+ | QML | C++ | QPainter | macOS
 
 ---
