@@ -19,13 +19,12 @@ Item {
     readonly property real gaugeTop:    gaugeCY - gaugeR
     readonly property real gaugeBottom: gaugeCY + gaugeR
 
-    // Центральная панель:
-    // — X начинается точно на внутреннем крае спидометра (без overlap!)
-    // — боковые дуги Display строятся по той же окружности что и гаджи,
-    //   поэтому стык визуально идеальный
-    readonly property real displayOverlap: gaugeR * 0.18   // только для Canvas-дуг внутри Display
-    readonly property real displayX: speedInnerX
-    readonly property real displayW: rpmInnerX - speedInnerX
+    // Центральная панель растянута до центров гаджей.
+    // Боковые края — вогнутые дуги (вырез внутрь) радиусом gaugeR,
+    // совпадающие ровно с окружностью циферблата.
+    readonly property real displayX: gaugeMarH + gaugeR          // = центр спидометра по X
+    readonly property real displayW: (root.width - gaugeMarH - gaugeR) - displayX  // до центра тахометра
+    readonly property real displayOverlap: gaugeR                // передаём в Display для Canvas
 
     // Высота: меньше гаджей на displayPadV с каждой стороны
     readonly property real displayPadV: gaugeSize * 0.085

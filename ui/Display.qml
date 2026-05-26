@@ -32,89 +32,110 @@ Item {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
 
-            var gr = root.gaugeR
+            var gr = root.gaugeR   // радиус гаджа = радиус вогнутой дуги
             var w  = width, h = height
 
             if (gr < 10) {
-                var sg = ctx.createLinearGradient(0, 0, 0, h)
-                sg.addColorStop(0.0, "#161A22"); sg.addColorStop(1.0, "#0A0C12")
-                ctx.fillStyle = sg; ctx.fillRect(0, 0, w, h); return
+                ctx.fillStyle = "#111418"
+                ctx.fillRect(0, 0, w, h); return
             }
 
-            // Display начинается точно на внутреннем крае гаджей.
-            // Центры дуг гаджей в локальных координатах Display:
-            //   левый:  lCx = -gr  (центр гаджа слева за краем canvas)
-            //   правый: rCx = w+gr (центр гаджа справа за краем canvas)
-            var lCx = -gr
-            var rCx = w + gr
+            // Display.x = центр спидометра.
+            // => центр спидометра в локальных координатах Display: lCx = 0
+            // => центр тахометра: rCx = w
+            // Вертикальный центр гаджа в локальных Y координатах Display:
+            //   gaugeCY_local = gaugeCY - displayY
+            //                 = gaugeCY - (gaugeCY - gaugeR + displayPadV)
+            //                 = gaugeR - displayPadV
+            //                 = gaugeR - gaugeSize*0.085
+            //                 = gaugeR - 2*gaugeR*0.085
+            //                 = gaugeR * (1 - 0.17) = gaugeR * 0.83
+            var cy = gr * 0.83
 
-            // Вертикальный центр гаджа в координатах Display.
-            // Display.height = gaugeSize*(1 - 2*0.085), gaugeSize = 2*gr
-            // Display.y = gaugeCY - gr + displayPadV = gaugeCY - gr + 2*gr*0.085
-            // gaugeCYlocal = gaugeCY - Display.y = gr - 2*gr*0.085 = gr*(1 - 0.17)
-            var gaugeCYlocal = gr * 0.83
+            // Симметричная система координат
+            var panelCx = w * 0.5
+            var halfGaugeDistance = w * 0.5
 
-            var dyTop = gaugeCYlocal
-            var dyBot = h - gaugeCYlocal
-            var sinTop = Math.min(0.9999, dyTop / gr)
-            var sinBot = Math.min(0.9999, dyBot / gr)
+            var lCx = panelCx - halfGaugeDistance
+            var rCx = panelCx + halfGaugeDistance
 
-            var rAngleTop = Math.PI - Math.asin(sinTop)
-            var rAngleBot = Math.PI + Math.asin(sinBot)
-            var lAngleBot = -Math.asin(sinBot)
-            var lAngleTop =  Math.asin(sinTop)
+            // Углы вогнутых дуг:
+            // Левая вогнутость: берём правую половину окружности спидометра,
+            //   от верхней точки пересечения с Display до нижней.
+            //   Верх Display: y=0  => dy_top = cy - 0 = cy
+            //   Низ Display:  y=h  => dy_bot = h - cy
+            var sinTop = Math.min(0.9999, cy / gr)
+            var sinBot = Math.min(0.9999, (h - cy) / gr)
+            var aTop = Math.asin(sinTop)   // угол от горизонтали до верхней точки
+            var aBot = Math.asin(sinBot)   // угол от горизонтали до нижней точки
 
-            // Контур панели
+            // Для левой вогнутости (центр lCx=0):
+            //   правая полудуга идёт от угла -aTop (вверх-вправо) до aBot (вниз-вправо)
+            //   НО рисуем её В ОБРАТНУЮ СТОРОНУ (clockwise = false → counter-clockwise)
+            //   чтобы получить вырез внутрь.
+            //   Точки: верх=(gr*cos(aTop), cy-cy) и низ=(gr*cos(aBot), h-cy+cy)
+            //   Угол от центра (0,cy):
+            //     верхняя точка: atan2(0-cy, xTop-0) = atan2(-cy, cos(aTop)*gr)
+            //     упрощённо: верхняя точка на дуге при y=0 → угол = -aTop (от оси X)
+            //                нижняя точка при y=h → угол = aBot
+            // Контур панели (по часовой стрелке):
+            var xTopLeft  = Math.sqrt(gr*gr - cy*cy)            // X верхней точки левой дуги
+            var xBotLeft  = Math.sqrt(gr*gr - (h-cy)*(h-cy))    // X нижней точки левой дуги
+            var xTopRight = w - xTopLeft                         // X верхней точки правой дуги
+            var xBotRight = w - xBotLeft                         // X нижней точки правой дуги
+
             ctx.beginPath()
-            ctx.moveTo(0, 0)
-            ctx.lineTo(w, 0)
-            ctx.arc(rCx, gaugeCYlocal, gr, rAngleTop, rAngleBot, false)
-            ctx.lineTo(0, h)
-            ctx.arc(lCx, gaugeCYlocal, gr, lAngleBot, lAngleTop, false)
+            // Верхний край: от верхней точки левой дуги до верхней точки правой
+            ctx.moveTo(xTopLeft, 0)
+            ctx.lineTo(xTopRight, 0)
+            // Правая вогнутая дуга: от верхней точки до нижней, counter-clockwise
+            // Центр (w, cy), от угла π+aTop (вверх-влево) до π-aBot (вниз-влево)
+            ctx.arc(rCx, cy, gr, Math.PI - aTop, Math.PI + aBot, false)
+            // Нижний край: от нижней точки правой до нижней точки левой
+            ctx.lineTo(xBotLeft, h)
+            // Левая вогнутая дуга: от нижней точки до верхней, counter-clockwise
+            // Центр (0, cy), от угла aBot (вниз-вправо) до -aTop (вверх-вправо), clockwise = true (по дуге вправо)
+            ctx.arc(lCx, cy, gr, aBot, -aTop, true)
             ctx.closePath()
 
-            // Слой 1: основной фон
-            var bg = ctx.createLinearGradient(0, 0, 0, h)
-            bg.addColorStop(0.00, "#171B24")
-            bg.addColorStop(0.35, "#111418")
-            bg.addColorStop(0.65, "#0E1016")
-            bg.addColorStop(1.00, "#090C11")
-            ctx.fillStyle = bg; ctx.fill()
+            // Фон
+            // var bg = ctx.createLinearGradient(0, 0, 0, h)
+            // bg.addColorStop(0.00, "#171B24")
+            // bg.addColorStop(0.35, "#111418")
+            // bg.addColorStop(0.65, "#0E1016")
+            // bg.addColorStop(1.00, "#090C11")
+            // ctx.fillStyle = bg; ctx.fill()
 
-            // Слой 2: стеклянный блик сверху
-            ctx.save(); ctx.clip()
-            var hiGrd = ctx.createLinearGradient(0, 0, 0, h * 0.22)
-            hiGrd.addColorStop(0.0, "rgba(50,62,82,0.42)")
-            hiGrd.addColorStop(0.6, "rgba(30,38,52,0.12)")
-            hiGrd.addColorStop(1.0, "rgba(0,0,0,0.00)")
-            ctx.fillStyle = hiGrd; ctx.fillRect(0, 0, w, h * 0.22)
+            // Стеклянный блик сверху
+            // ctx.save(); ctx.clip()
+            // var hiGrd = ctx.createLinearGradient(0, 0, 0, h * 0.22)
+            // hiGrd.addColorStop(0.0, "rgba(50,62,82,0.40)")
+            // hiGrd.addColorStop(1.0, "rgba(0,0,0,0.00)")
+            // ctx.fillStyle = hiGrd; ctx.fillRect(0, 0, w, h * 0.22)
 
-            // Слой 3: тонкое затемнение снизу
-            var botGrd = ctx.createLinearGradient(0, h * 0.80, 0, h)
-            botGrd.addColorStop(0.0, "rgba(0,0,0,0.00)")
-            botGrd.addColorStop(1.0, "rgba(0,0,0,0.15)")
-            ctx.fillStyle = botGrd; ctx.fillRect(0, h * 0.80, w, h * 0.20)
-            ctx.restore()
+            // var botGrd = ctx.createLinearGradient(0, h * 0.80, 0, h)
+            // botGrd.addColorStop(0.0, "rgba(0,0,0,0.00)")
+            // botGrd.addColorStop(1.0, "rgba(0,0,0,0.15)")
+            // ctx.fillStyle = botGrd; ctx.fillRect(0, h * 0.80, w, h * 0.20)
+            // ctx.restore()
 
-            // Верхняя рамка
+            // Верхняя и нижняя рамки
             ctx.strokeStyle = "rgba(80,95,115,0.75)"
-            ctx.lineWidth = 1.0
-            ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(w - 2, 0); ctx.stroke()
-
-            // Нижняя рамка
+            ctx.lineWidth = 1.5
+            ctx.beginPath(); ctx.moveTo(xTopLeft + 2, 0); ctx.lineTo(xTopRight - 2, 0); ctx.stroke()
             ctx.strokeStyle = "rgba(50,60,75,0.50)"
-            ctx.lineWidth = 1.0
-            ctx.beginPath(); ctx.moveTo(2, h); ctx.lineTo(w - 2, h); ctx.stroke()
+            ctx.lineWidth = 1.5
+            ctx.beginPath(); ctx.moveTo(xBotLeft + 2, h); ctx.lineTo(xBotRight - 2, h); ctx.stroke()
 
-            // Боковые дуги — тонкая рамка
-            ctx.strokeStyle = "rgba(65,78,96,0.55)"
-            ctx.lineWidth = 1.0
-            ctx.beginPath()
-            ctx.arc(rCx, gaugeCYlocal, gr - 0.5, rAngleTop, rAngleBot, false)
-            ctx.stroke()
-            ctx.beginPath()
-            ctx.arc(lCx, gaugeCYlocal, gr - 0.5, lAngleBot, lAngleTop, false)
-            ctx.stroke()
+            // Боковые вогнутые дуги — тонкая рамка
+            // ctx.strokeStyle = "rgba(65,78,96,0.60)"
+            // ctx.lineWidth = 1.0
+            // ctx.beginPath()
+            // ctx.arc(rCx, cy, gr - 0.5, Math.PI - aTop, Math.PI + aBot, false)
+            // ctx.stroke()
+            // ctx.beginPath()
+            // ctx.arc(lCx, cy, gr - 0.5, aBot, -aTop, true)
+            // ctx.stroke()
         }
 
         Connections {
@@ -131,8 +152,11 @@ Item {
         id: content
         anchors {
             fill:        parent
-            leftMargin:  root.width * 0.04
-            rightMargin: root.width * 0.04
+            // Отступаем от боковых вогнутых дуг: дуга уходит вглубь на gaugeR от края,
+            // самая узкая точка — у центра гаджа (y = cy), там дуга = 0px от края.
+            // Берём ~60% от gaugeR как безопасный горизонтальный отступ.
+            leftMargin:  root.gaugeR * 0.62
+            rightMargin: root.gaugeR * 0.62
         }
         clip: true
         z: 1
