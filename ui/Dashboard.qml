@@ -25,7 +25,7 @@ Item {
 
     // Высота панели: отступ displayPadV с каждой стороны.
     // Увеличен → больше места для стрипов индикаторов (крупнее иконки).
-    readonly property real displayPadV: gaugeSize * 0.108
+    readonly property real displayPadV: gaugeSize * 0.128
     readonly property real displayY: gaugeTop    + displayPadV
     readonly property real displayH: gaugeBottom - gaugeTop - displayPadV * 2
 
@@ -42,12 +42,13 @@ Item {
     readonly property real displayW: (rpmCX - _arcAtEdge) - (speedCX + _arcAtEdge)
 
     // Стрипы между верхом гаджей и Display
-    readonly property real stripZoneTop:    gaugeTop + gaugeSize * 0.04
-    readonly property real stripZoneBottom: displayY - root.height * 0.005
+    // Ошибки (красные) — выше, варнинги (жёлтые) — ниже.
+    readonly property real stripZoneTop:    gaugeTop + gaugeSize * 0.015
+    readonly property real stripZoneBottom: displayY - root.height * 0.014
     readonly property real stripW:          rpmInnerX - speedInnerX - gaugeSize * 0.06
 
-    readonly property real warnZoneTop:    displayY + displayH + root.height * 0.005
-    readonly property real warnZoneBottom: gaugeBottom - gaugeSize * 0.04
+    readonly property real warnZoneTop:    displayY + displayH + root.height * 0.018
+    readonly property real warnZoneBottom: gaugeBottom - gaugeSize * 0.015
 
     // RPM-свечение — сглаженное
     readonly property real rpmNorm: Math.min(1.0, dataModel.rpm / 8000.0)
@@ -110,7 +111,7 @@ Item {
         y:      root.stripZoneTop
         width:  root.stripW
         height: Math.max(0, root.stripZoneBottom - root.stripZoneTop)
-        iconSz: Math.min(80, height * 0.88)
+        iconSz: Math.min(78, height * 0.74)
         startupMode:   root.startupPhase === "sweep"
         engineRunning: dataModel.engineRunning
         systemActive:  root.startupPhase !== "idle"
@@ -122,7 +123,7 @@ Item {
         y:      root.warnZoneTop
         width:  root.stripW
         height: Math.max(0, root.warnZoneBottom - root.warnZoneTop)
-        iconSz: Math.min(80, height * 0.88)
+        iconSz: Math.min(78, height * 0.74)
         startupMode:   root.startupPhase === "sweep"
         engineRunning: dataModel.engineRunning
         systemActive:  root.startupPhase !== "idle"
@@ -260,12 +261,13 @@ Item {
         Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.InOutQuad } }
     }
 
-    // ── z=6: ПОВОРОТНИКИ (компактные, в зоне стрипов) ────────────────────────
+    // ── z=6: ПОВОРОТНИКИ — у границ спидометра / тахометра ───────────────────
+    // Центрированы на внутреннем крае каждого гаджа, в верхней зоне стрипов.
     Image {
-        x: root.speedInnerX + root.gaugeSize * 0.015
-        y: root.stripZoneTop + (root.stripZoneBottom - root.stripZoneTop - height) / 2
-        width: root.gaugeSize * 0.060
-        height: width
+        x: root.speedInnerX - width / 2
+        y: root.stripZoneTop + root.gaugeSize * 0.004
+        width: root.gaugeSize * 0.105
+        height: root.gaugeSize * 0.072
         source: "qrc:/assets/icons/turn_left.png"
         fillMode: Image.PreserveAspectFit
         smooth: true
@@ -276,10 +278,10 @@ Item {
     }
 
     Image {
-        x: root.rpmInnerX - root.gaugeSize * 0.015 - width
-        y: root.stripZoneTop + (root.stripZoneBottom - root.stripZoneTop - height) / 2
-        width: root.gaugeSize * 0.060
-        height: width
+        x: root.rpmInnerX - width / 2
+        y: root.stripZoneTop + root.gaugeSize * 0.004
+        width: root.gaugeSize * 0.105
+        height: root.gaugeSize * 0.072
         source: "qrc:/assets/icons/turn_right.png"
         fillMode: Image.PreserveAspectFit
         smooth: true

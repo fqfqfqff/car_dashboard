@@ -5,11 +5,15 @@
 #include <QMutexLocker>
 
 // ─── Kvaser CANlib ─────────────────────────────────────────────────────────────
-#ifdef Q_OS_WIN
+// HAVE_CANLIB определяется в .pro только на Windows при наличии драйвера Kvaser.
+// На macOS/Linux (и на Windows без Kvaser) используется заглушка — проект собирается
+// и работает на симуляторе, подключение к CAN корректно «не удаётся».
+#ifdef HAVE_CANLIB
 #  include <canlib.h>
 #else
 #  define canOPEN_ACCEPT_VIRTUAL 0x0020
 typedef int canHandle;
+typedef int canStatus;
 static int  canInitializeLibrary()                              { return 0; }
 static int  canOpenChannel(int, int)                            { return -1; }
 static int  canSetBusParams(int, long, int, int, int, int, int) { return -1; }
@@ -17,7 +21,7 @@ static int  canBusOn(int)                                       { return -1; }
 static int  canBusOff(int)                                      { return 0; }
 static int  canClose(int)                                       { return 0; }
 static int  canRead(int, long*, void*, unsigned int*, unsigned int*, unsigned long*) { return -1; }
-static const char *canGetErrorText(int, char*, int)             { return "stub"; }
+static const char *canGetErrorText(int, char*, int)             { return "CAN недоступен (сборка без Kvaser)"; }
 static constexpr int canOK        = 0;
 static constexpr int canERR_NOMSG = -2;
 #endif

@@ -36,17 +36,25 @@ RESOURCES += resources.qrc
 win32 {
     KVASER_PATH = "C:/Program Files (x86)/Kvaser/Canlib"
 
-    INCLUDEPATH += $$KVASER_PATH/INC
-
-    LIBS += -L"C:/Program Files (x86)/Kvaser/Canlib/Lib/x64" -lcanlib32
+    # CAN включается только если драйвер Kvaser реально установлен.
+    exists("$$KVASER_PATH/INC/canlib.h") {
+        message("Kvaser CANlib найден — сборка С поддержкой CAN")
+        DEFINES     += HAVE_CANLIB
+        INCLUDEPATH += $$KVASER_PATH/INC
+        LIBS        += -L"$$KVASER_PATH/Lib/x64" -lcanlib32
+    } else {
+        message("Kvaser CANlib не найден — сборка БЕЗ CAN (заглушка)")
+    }
 }
 
-# ─── macOS/Linux (заглушка, для сборки без железа) ───────────────────────────
-macx|unix {
-    message("CANlib stub mode: сборка без Kvaser")
+# ─── macOS / Linux — всегда без CAN (Kvaser только под Windows) ───────────────
+# HAVE_CANLIB не определяется → CANReader использует заглушку, работает симулятор.
+macx|unix:!android {
+    message("Платформа без Kvaser — сборка БЕЗ CAN (заглушка)")
 }
 
-QMAKE_APPLE_DEVICE_ARCHS = arm64
+# Архитектуру под macOS определяет выбранный Qt-кит (arm64 или x86_64) —
+# жёстко не фиксируем, чтобы собиралось и на Apple Silicon, и на Intel.
 
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

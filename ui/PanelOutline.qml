@@ -1,6 +1,3 @@
-// PanelOutline.qml — Audi cluster outline v9
-// Точная геометрия + многослойная обводка + плавное RPM-свечение
-
 import QtQuick 2.15
 
 Canvas {
@@ -22,11 +19,22 @@ Canvas {
     readonly property real topCtrlY: gCY - r - gs * 0.030
     readonly property real botCtrlY: gCY + r + gs * 0.010
 
+    // Последнее значение оборотов, при котором был перерисован контур.
+    // Свечение — медленный эффект, перерисовка на каждый микрошаг анимации
+    // _smoothRpmNorm (≈60 fps) избыточна. Перерисовываем только при заметной
+    // дельте → ~10–15 fps вместо 60, без видимой разницы.
+    property real _lastRpmN: -1.0
+
     onWidthChanged:  requestPaint()
     onHeightChanged: requestPaint()
     onGsChanged:     requestPaint()
     onGCYChanged:    requestPaint()
-    onRpmNChanged:   requestPaint()
+    onRpmNChanged: {
+        if (Math.abs(rpmN - _lastRpmN) >= 0.012 || rpmN <= 0.0 || rpmN >= 1.0) {
+            _lastRpmN = rpmN
+            requestPaint()
+        }
+    }
 
     onPaint: {
         var ctx = getContext("2d")

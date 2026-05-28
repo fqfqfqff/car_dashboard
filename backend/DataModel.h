@@ -47,6 +47,13 @@ class DataModel : public QObject
     // П.12: CAN-ready — источник данных (симулятор или CAN)
     Q_PROPERTY(bool canConnected  READ canConnected  WRITE setCanConnected  NOTIFY canConnectedChanged)
 
+    // Мониторинг авто (CAN-ready): давление в шинах (бар) и напряжение АКБ (В)
+    Q_PROPERTY(double tirePressFL READ tirePressFL WRITE setTirePressFL NOTIFY tirePressFLChanged)
+    Q_PROPERTY(double tirePressFR READ tirePressFR WRITE setTirePressFR NOTIFY tirePressFRChanged)
+    Q_PROPERTY(double tirePressRL READ tirePressRL WRITE setTirePressRL NOTIFY tirePressRLChanged)
+    Q_PROPERTY(double tirePressRR READ tirePressRR WRITE setTirePressRR NOTIFY tirePressRRChanged)
+    Q_PROPERTY(double batteryVoltage READ batteryVoltage WRITE setBatteryVoltage NOTIFY batteryVoltageChanged)
+
 public:
     explicit DataModel(QObject *parent = nullptr);
 
@@ -55,6 +62,12 @@ public:
     double fuelLevel()  const { return m_fuelLevel; }
     double engineTemp() const { return m_engineTemp; }
     double odometer() const { return m_odometer; }
+
+    double tirePressFL() const { return m_tirePressFL; }
+    double tirePressFR() const { return m_tirePressFR; }
+    double tirePressRL() const { return m_tirePressRL; }
+    double tirePressRR() const { return m_tirePressRR; }
+    double batteryVoltage() const { return m_batteryVoltage; }
 
     bool brakeOverheat() const { return m_brakeOverheat; }
     bool canConnected()  const { return m_canConnected;  }
@@ -92,6 +105,11 @@ public:
     void setEngineTemp(double v);
     void setEngineRunning(bool v);
     void   setOdometer(double v);
+    void setTirePressFL(double v);
+    void setTirePressFR(double v);
+    void setTirePressRL(double v);
+    void setTirePressRR(double v);
+    void setBatteryVoltage(double v);
     void setBrakeOverheat(bool v);
     void setCanConnected (bool v);
 
@@ -148,6 +166,11 @@ signals:
     void engineRunningChanged();
     void currentGearChanged();
     void odometerChanged();
+    void tirePressFLChanged();
+    void tirePressFRChanged();
+    void tirePressRLChanged();
+    void tirePressRRChanged();
+    void batteryVoltageChanged();
     void brakeOverheatChanged();
     void canConnectedChanged();
     void brakeFluidChanged();
@@ -161,6 +184,13 @@ private:
     double m_fuelLevel  = 75.0;
     double m_engineTemp = 20.0;
     double m_odometer = 100.0; // начальное значение 100 км
+
+    // Мониторинг: давление шин (бар), напряжение АКБ (В) — норма по умолчанию
+    double m_tirePressFL = 2.2;
+    double m_tirePressFR = 2.2;
+    double m_tirePressRL = 2.2;
+    double m_tirePressRR = 2.2;
+    double m_batteryVoltage = 12.4;
 
     int m_currentGear = 0;
 

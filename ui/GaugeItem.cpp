@@ -5,6 +5,7 @@
 #include <QRadialGradient>
 #include <QConicalGradient>
 #include <QFontMetricsF>
+#include <QQuickWindow>
 
 // =============================================================================
 // Цветовые константы (зеркало DesignSystem.qml для C++ слоя)
@@ -83,14 +84,33 @@ void GaugeItem::paint(QPainter *painter)
 
     const double norm = qBound(0.0, normalize(m_value), 1.0);
 
-    // Порядок слоёв (как в Photoshop, снизу вверх):
-    drawBackground  (painter, center, outerR, innerR);
+    // ── Статический слой (фон + деления + подписи) ──────────────────────────────
+    // Эти элементы зависят только от размера и диапазона, поэтому рисуем их один раз
+    // в QImage-кэш и затем просто копируем. Экономит дорогой рендер текста подписей
+    // и десятки линий делений на КАЖДОМ кадре движения.
+    const qreal dpr  = window() ? window()->effectiveDevicePixelRatio() : 1.0;
+    const QSize phys(qMax(1, int(qCeil(width()  * dpr))),
+                     qMax(1, int(qCeil(height() * dpr))));
+
+    if (m_staticDirty || m_staticLayer.size() != phys) {
+        m_staticLayer = QImage(phys, QImage::Format_ARGB32_Premultiplied);
+        m_staticLayer.setDevicePixelRatio(dpr);
+        m_staticLayer.fill(Qt::transparent);
+
+        QPainter sp(&m_staticLayer);
+        sp.setRenderHint(QPainter::Antialiasing,     true);
+        sp.setRenderHint(QPainter::TextAntialiasing, true);
+        drawBackground (&sp, center, outerR, innerR);
+        drawTicks      (&sp, center, outerR, innerR);
+        drawTickLabels (&sp, center, outerR, innerR);
+        m_staticDirty = false;
+    }
+    painter->drawImage(0, 0, m_staticLayer);
+
+    // ── Динамические слои (каждый кадр) ─────────────────────────────────────────
     drawArcTrack    (painter, center, outerR, norm);
-    drawTicks       (painter, center, outerR, innerR);
-    drawTickLabels  (painter, center, outerR, innerR);
     drawGlowRing    (painter, center, innerR);
     drawNeedle      (painter, center, outerR, innerR, norm);
-    // drawCenterHub   (painter, center);
     drawCenterText  (painter, center, innerR, norm);
 }
 
@@ -347,8 +367,8 @@ void GaugeItem::drawGlowRing(QPainter *p, QPointF c, double innerR)
     p->setPen(Qt::NoPen);
 
     // Широкое мягкое внешнее гало — много стопов для плавного затухания
-    const double rOuter = innerR * 1.34;
-    const int aMax = qRound(t * 74.0);
+    const double rOuter = innerR * 1.40;
+    const int aMax = qMin(255, qRound(t * 120.0));
     QRadialGradient glowOuter(c, rOuter);
     glowOuter.setColorAt(0.32, QColor(R, G, B, 0));
     glowOuter.setColorAt(0.48, QColor(R, G, B, aMax / 6));
@@ -362,8 +382,8 @@ void GaugeItem::drawGlowRing(QPainter *p, QPointF c, double innerR)
     p->drawEllipse(c, rOuter, rOuter);
 
     // Внутреннее тёплое ядро — лёгкая заливка к центру
-    const double rInner = innerR * 1.02;
-    const int aIn = qRound(t * 30.0);
+    const double rInner = innerR * 1.05;
+    const int aIn = qMin(255, qRound(t * 52.0));
     const QColor core = gc.lighter(125);
     QRadialGradient glowInner(c, rInner);
     glowInner.setColorAt(0.00, QColor(core.red(), core.green(), core.blue(), aIn));

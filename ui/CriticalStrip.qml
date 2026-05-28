@@ -28,10 +28,14 @@ Item {
     property int forcedColumns:      0
     property real defaultIconScale:  1.0
 
-    readonly property int iconsPerRow:
-        forcedColumns > 0
-            ? forcedColumns
-            : Math.max(1, Math.floor(root.width / (root.iconSz * 1.22)))
+    // Кол-во активных иконок
+    readonly property int visN: visibleItems.length
+    // Эффективный размер иконки: при большом числе уменьшаем, чтобы ВСЕ вошли в ОДНУ строку
+    readonly property real effSz: visN > 0
+        ? Math.min(root.iconSz, (root.width * 0.98 / visN) / 1.22)
+        : root.iconSz
+    // Всегда одна строка — второй ряд не появляется и не прячется под панель
+    readonly property int iconsPerRow: Math.max(1, visN)
 
     // ── Список критических индикаторов ────────────────────────────────────────
     // ВАЖНО: индикатор ручника (brakeSystem) горит пока он активен — независимо от фазы.
@@ -82,8 +86,8 @@ Item {
         return res
     }
 
-    readonly property real cellW: root.iconSz * 1.22
-    readonly property real cellH: root.iconSz * 1.22
+    readonly property real cellW: root.effSz * 1.22
+    readonly property real cellH: root.effSz * 1.22
 
     // ── Централизованный таймер мигания ────────────────────────────────────
     // Единый источник истины: нет рассинхрона между индикаторами
@@ -109,11 +113,11 @@ Item {
             readonly property int row_:     Math.floor(index / iconsPerRow)
             readonly property int rowCount_: Math.min(iconsPerRow, visibleItems.length - row_ * iconsPerRow)
             readonly property real rowStartX: (root.width - rowCount_ * cellW) / 2.0
-            readonly property real targetX:   rowStartX + col * cellW + (cellW - iconSz) / 2
-            readonly property real targetY:   row_ * cellH + (cellH - iconSz) / 2
+            readonly property real targetX:   rowStartX + col * cellW + (cellW - root.effSz) / 2
+            readonly property real targetY:   row_ * cellH + (cellH - root.effSz) / 2
 
-            width:  iconSz
-            height: iconSz
+            width:  root.effSz
+            height: root.effSz
             x:      targetX
 
             readonly property color ac: "#FF3B30"
@@ -124,7 +128,7 @@ Item {
             property real _fadeOp:   0.0
             property real _blinkMul: 1.0
             property real scaleVal:  0.65
-            property real slideOffset: -iconSz * 2.8
+            property real slideOffset: -root.effSz * 2.8
 
             // Итоговая прозрачность — произведение двух множителей
             opacity: _fadeOp * _blinkMul
@@ -148,7 +152,7 @@ Item {
                 property int delay: 0
                 PauseAnimation { duration: appearAnim.delay }
                 ParallelAnimation {
-                    NumberAnimation { target: chip; property: "slideOffset"; from: -iconSz*2.8; to: 0;   duration: 700; easing.type: Easing.OutExpo }
+                    NumberAnimation { target: chip; property: "slideOffset"; from: -root.effSz*2.8; to: 0;   duration: 700; easing.type: Easing.OutExpo }
                     NumberAnimation { target: chip; property: "_fadeOp";     from: 0.0;         to: 1.0; duration: 550; easing.type: Easing.InOutCubic }
                     NumberAnimation { target: chip; property: "scaleVal";    from: 0.65;        to: 1.0; duration: 700; easing.type: Easing.OutExpo }
                 }
@@ -217,7 +221,7 @@ Item {
 
             Image {
                 anchors.centerIn: parent
-                width:  iconSz * d.iconScale
+                width:  root.effSz * d.iconScale
                 height: width
                 source: d.icon
                 fillMode: Image.PreserveAspectFit

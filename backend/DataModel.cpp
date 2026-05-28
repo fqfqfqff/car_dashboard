@@ -52,6 +52,12 @@ void DataModel::setOdometer(double v)
     emit odometerChanged();
 }
 
+void DataModel::setTirePressFL(double v) { if (qFuzzyCompare(m_tirePressFL, v)) return; m_tirePressFL = v; emit tirePressFLChanged(); }
+void DataModel::setTirePressFR(double v) { if (qFuzzyCompare(m_tirePressFR, v)) return; m_tirePressFR = v; emit tirePressFRChanged(); }
+void DataModel::setTirePressRL(double v) { if (qFuzzyCompare(m_tirePressRL, v)) return; m_tirePressRL = v; emit tirePressRLChanged(); }
+void DataModel::setTirePressRR(double v) { if (qFuzzyCompare(m_tirePressRR, v)) return; m_tirePressRR = v; emit tirePressRRChanged(); }
+void DataModel::setBatteryVoltage(double v) { if (qFuzzyCompare(m_batteryVoltage, v)) return; m_batteryVoltage = v; emit batteryVoltageChanged(); }
+
 void DataModel::setBrakeOverheat(bool v)
 {
     if (m_brakeOverheat == v) return;

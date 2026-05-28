@@ -53,6 +53,7 @@ Simulator::Simulator(DataModel *model, Controller *controller, QObject *parent)
         m_fuelAvg        = 0.0;
         m_totalFuelBurned = 0.0;
         m_totalDistKm    = 0.0;
+        m_model->setBatteryVoltage(14.2);   // генератор заряжает
         m_model->setEngineRunning(true);
     });
 
@@ -66,6 +67,7 @@ Simulator::Simulator(DataModel *model, Controller *controller, QObject *parent)
         emit wheelSpinChanged();
         // Удержание в полосе отключается вместе с двигателем
         m_model->setLaneAssist(false);
+        m_model->setBatteryVoltage(12.4);   // только АКБ
     });
 
     connect(controller, &Controller::gasChanged, this, [this](float v) {
@@ -130,7 +132,12 @@ Simulator::Simulator(DataModel *model, Controller *controller, QObject *parent)
         else if (name == "checkEngine")   m_model->setCheckEngine   (!m_model->checkEngine());
         else if (name == "absActive")     m_model->setAbsActive     (!m_model->absActive());
         else if (name == "espActive")     m_model->setEspActive     (!m_model->espActive());
-        else if (name == "tpmsActive")    m_model->setTpmsActive    (!m_model->tpmsActive());
+        else if (name == "tpmsActive") {
+            bool on = !m_model->tpmsActive();
+            m_model->setTpmsActive(on);
+            // Демонстрация: при TPMS падает давление в заднем левом колесе
+            m_model->setTirePressRL(on ? 1.6 : 2.2);
+        }
         else if (name == "fuelLow")       m_model->setFuelLow       (!m_model->fuelLow());
         else if (name == "brakeWear")     m_model->setBrakeWear     (!m_model->brakeWear());
         else if (name == "steeringFault")        m_model->setSteeringFault       (!m_model->steeringFault());

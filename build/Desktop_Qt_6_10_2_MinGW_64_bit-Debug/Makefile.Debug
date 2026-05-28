@@ -13,7 +13,7 @@ EQ            = =
 
 CC            = gcc
 CXX           = g++
-DEFINES       = -DUNICODE -D_UNICODE -DWIN32 -DMINGW_HAS_SECURE_API=1 -DQT_QML_DEBUG -DQT_QUICKEFFECTS_LIB -DQT_QUICK_LIB -DQT_OPENGL_LIB -DQT_SVG_LIB -DQT_GUI_LIB -DQT_QML_LIB -DQT_QMLINTEGRATION_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_NEEDS_QMAIN
+DEFINES       = -DUNICODE -D_UNICODE -DWIN32 -DMINGW_HAS_SECURE_API=1 -DHAVE_CANLIB -DQT_QML_DEBUG -DQT_QUICKEFFECTS_LIB -DQT_QUICK_LIB -DQT_OPENGL_LIB -DQT_SVG_LIB -DQT_GUI_LIB -DQT_QML_LIB -DQT_QMLINTEGRATION_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_NEEDS_QMAIN
 CFLAGS        = -fno-keep-inline-dllexport -g -Wall -Wextra -Wextra $(DEFINES)
 CXXFLAGS      = -fno-keep-inline-dllexport -g -std=gnu++1z -Wall -Wextra -Wextra -fexceptions -mthreads $(DEFINES)
 INCPATH       = -I../../../car_dashboard -I. -I"C:/Program Files (x86)/Kvaser/Canlib/INC" -IC:/Qt/6.10.2/mingw_64/include -IC:/Qt/6.10.2/mingw_64/include/QtQuickEffects -IC:/Qt/6.10.2/mingw_64/include/QtQuick -IC:/Qt/6.10.2/mingw_64/include/QtOpenGL -IC:/Qt/6.10.2/mingw_64/include/QtSvg -IC:/Qt/6.10.2/mingw_64/include/QtGui -IC:/Qt/6.10.2/mingw_64/include/QtQml -IC:/Qt/6.10.2/mingw_64/include/QtQmlIntegration -IC:/Qt/6.10.2/mingw_64/include/QtNetwork -IC:/Qt/6.10.2/mingw_64/include/QtCore -Idebug -I/include -IC:/Qt/6.10.2/mingw_64/mkspecs/win32-g++ 
@@ -711,6 +711,7 @@ debug/moc_GaugeItem.cpp: ../../ui/GaugeItem.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qfontinfo.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qfontvariableaxis.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qfontmetrics.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/QImage \
 		debug/moc_predefs.h \
 		C:/Qt/6.10.2/mingw_64/bin/moc.exe
 	C:\Qt\6.10.2\mingw_64\bin\moc.exe $(DEFINES) --include C:/Users/Никита/Documents/GitHub/car_dashboard/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/debug/moc_predefs.h -IC:/Qt/6.10.2/mingw_64/mkspecs/win32-g++ -IC:/Users/Никита/Documents/GitHub/car_dashboard -I"C:/Program Files (x86)/Kvaser/Canlib/INC" -IC:/Qt/6.10.2/mingw_64/include -IC:/Qt/6.10.2/mingw_64/include/QtQuickEffects -IC:/Qt/6.10.2/mingw_64/include/QtQuick -IC:/Qt/6.10.2/mingw_64/include/QtOpenGL -IC:/Qt/6.10.2/mingw_64/include/QtSvg -IC:/Qt/6.10.2/mingw_64/include/QtGui -IC:/Qt/6.10.2/mingw_64/include/QtQml -IC:/Qt/6.10.2/mingw_64/include/QtQmlIntegration -IC:/Qt/6.10.2/mingw_64/include/QtNetwork -IC:/Qt/6.10.2/mingw_64/include/QtCore -I. -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++ -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/x86_64-w64-mingw32 -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/backward -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed -IC:/Qt/Tools/mingw1310_64/x86_64-w64-mingw32/include ..\..\ui\GaugeItem.h -o debug\moc_GaugeItem.cpp
@@ -1096,6 +1097,7 @@ debug/main.o: ../../main.cpp C:/Qt/6.10.2/mingw_64/include/QtGui/QGuiApplication
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qfontinfo.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qfontvariableaxis.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qfontmetrics.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/QImage \
 		../../ui/CANReader.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/QThread \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/QMutex \
@@ -1671,12 +1673,34 @@ debug/GaugeItem.o: ../../ui/GaugeItem.cpp ../../ui/GaugeItem.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qfontinfo.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qfontvariableaxis.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qfontmetrics.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/QImage \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/QtMath \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/QPainterPath \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qpainterpath.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/QRadialGradient \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/QConicalGradient \
-		C:/Qt/6.10.2/mingw_64/include/QtGui/QFontMetricsF
+		C:/Qt/6.10.2/mingw_64/include/QtGui/QFontMetricsF \
+		C:/Qt/6.10.2/mingw_64/include/QtQuick/QQuickWindow \
+		C:/Qt/6.10.2/mingw_64/include/QtQuick/qquickwindow.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQuick/qsgrendererinterface.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQuick/qsgnode.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQuick/qsggeometry.h \
+		C:/Qt/6.10.2/mingw_64/include/QtCore/QRectF \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/QMatrix4x4 \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/qmatrix4x4.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/qvector3d.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/qvector4d.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/qgenericmatrix.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/qwindow.h \
+		C:/Qt/6.10.2/mingw_64/include/QtCore/QEvent \
+		C:/Qt/6.10.2/mingw_64/include/QtCore/QMargins \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/qsurface.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/qsurfaceformat.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/qicon.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/qcursor.h \
+		C:/Qt/6.10.2/mingw_64/include/QtGui/qbitmap.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQml/qqmldebug.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQml/qqmlinfo.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o debug\GaugeItem.o ..\..\ui\GaugeItem.cpp
 
 debug/CANReader.o: ../../ui/CANReader.cpp ../../ui/CANReader.h \
