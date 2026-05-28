@@ -32,14 +32,14 @@ Item {
     // Показываются ТОЛЬКО при работающем двигателе (или self-check).
     // iconScale: индивидуальный масштаб иконки внутри ячейки (1.0 = стандарт)
     readonly property var allItems: [
-        { icon: "qrc:/assets/icons/check_engine.png", active: dataModel.checkEngine,  level: "warning", iconScale: 0.5 },
-        { icon: "qrc:/assets/icons/abs.png",          active: dataModel.absActive,    level: "warning", iconScale: 0.5 },
-        { icon: "qrc:/assets/icons/esp.png",          active: dataModel.espActive,    level: "warning", iconScale: 0.5 },
-        { icon: "qrc:/assets/icons/tpms.png",         active: dataModel.tpmsActive,   level: "warning", iconScale: 0.5 },
-        { icon: "qrc:/assets/icons/fuel_low.png",     active: dataModel.fuelLow,      level: "warning", iconScale: 0.5 },
-        { icon: "qrc:/assets/icons/temp.png",         active: dataModel.overheating,  level: "warning", iconScale: 0.5 },
-        { icon: "qrc:/assets/icons/oil.png",          active: dataModel.oilPressure,  level: "warning", iconScale: 0.5 },
-        { icon: "qrc:/assets/icons/battery.png",      active: dataModel.batteryFault, level: "warning", iconScale: 0.5 },
+        { icon: "qrc:/assets/icons/check_engine.png", active: dataModel.checkEngine,  level: "warning", iconScale: 0.85 },
+        { icon: "qrc:/assets/icons/abs.png",          active: dataModel.absActive,    level: "warning", iconScale: 0.85 },
+        { icon: "qrc:/assets/icons/esp.png",          active: dataModel.espActive,    level: "warning", iconScale: 0.85 },
+        { icon: "qrc:/assets/icons/tpms.png",         active: dataModel.tpmsActive,   level: "warning", iconScale: 0.85 },
+        { icon: "qrc:/assets/icons/fuel_low.png",     active: dataModel.fuelLow,      level: "warning", iconScale: 0.85 },
+        { icon: "qrc:/assets/icons/temp.png",         active: dataModel.overheating,  level: "warning", iconScale: 0.85 },
+        { icon: "qrc:/assets/icons/oil.png",          active: dataModel.oilPressure,  level: "warning", iconScale: 0.85 },
+        { icon: "qrc:/assets/icons/battery.png",      active: dataModel.batteryFault, level: "warning", iconScale: 0.85 },
     ]
 
     readonly property var displayItems: {

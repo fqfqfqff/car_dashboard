@@ -1,28 +1,59 @@
-pragma ComponentBehavior: Bound
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 
 Item {
     id: root
-    clip: true
+    // clip отключён, чтобы Canvas мог рисовать дуги вплотную к гаджам
+    clip: false
 
     readonly property var dm:  (typeof dataModel !== "undefined" && dataModel !== null) ? dataModel : null
     readonly property var sim: (typeof simulator  !== "undefined" && simulator  !== null) ? simulator : null
 
     property var  criticalLabels: []
     property bool hasCritical:    false
-    property real sideOverlap: 0
     property real gaugeR: 0
+    property real arcR:   0   // радиус видимого диска гаджа (≈ 0.95·gaugeR), задаётся снаружи
 
-    readonly property color speedColor: {
-        var s = root.dm ? root.dm.speed : 0
-        if (s > 240) return "#FF3B30"
-        if (s > 200) return "#FFB300"
-        if (s > 150) return "#FFCC00"
-        return "#EDF1F5"
+    // Координаты центров гаджей в локальной системе Display
+    property real speedCXLocal: 0
+    property real rpmCXLocal:   0
+    property real gaugeCYLocal: 0
+
+    readonly property real tankCapacity: 50.0
+
+    readonly property real fuelNorm: root.dm ? Math.max(0, Math.min(1, root.dm.fuelLevel / 100.0)) : 0.75
+    readonly property color fuelColor: {
+        var f = root.dm ? root.dm.fuelLevel : 75
+        if (f <= 10) return "#FF3B30"
+        if (f <= 25) return "#FFB300"
+        return "#0A84FF"
     }
 
-    // ── ФОН: Canvas с боковыми дугами формы гаджей ───────────────────────────
+    readonly property color tempColor: {
+        var t = root.dm ? root.dm.engineTemp : 20
+        if (t >= 110) return "#FF3B30"
+        if (t >= 90)  return "#FFCC00"
+        if (t >= 60)  return "#30D158"
+        return "#4A8FD4"
+    }
+
+    readonly property real rangeKm: {
+        var fuel = root.dm ? root.dm.fuelLevel : 0
+        var avg  = root.sim ? root.sim.fuelAvg : 0
+        if (avg < 0.1 || fuel <= 0) return 0
+        return (fuel / 100.0 * root.tankCapacity) / (avg / 100.0)
+    }
+
+    // Края вогнутой фигуры на уровне y (локальные координаты)
+    function shapeEdgesAtY(localY) {
+        var cy = root.gaugeCYLocal
+        var R  = root.arcR
+        var d  = localY - cy
+        var h  = Math.sqrt(Math.max(0, R * R - d * d))
+        return { leftX:  root.speedCXLocal + h,
+                 rightX: root.rpmCXLocal   - h }
+    }
+
+    // ── Фон: чисто чёрная вогнутая фигура ──────────────────────────────────────
     Canvas {
         id: bgCanvas
         anchors.fill: parent
@@ -32,167 +63,79 @@ Item {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
 
-            var gr = root.gaugeR   // радиус гаджа = радиус вогнутой дуги
-            var w  = width, h = height
+            var lCX = root.speedCXLocal
+            var rCX = root.rpmCXLocal
+            var cy  = root.gaugeCYLocal
+            var R   = root.arcR
+            if (R < 10) return
 
-            if (gr < 10) {
-                ctx.fillStyle = "#111418"
-                ctx.fillRect(0, 0, w, h); return
-            }
+            var topD = cy
+            var botD = height - cy
 
-            // Display.x = центр спидометра.
-            // => центр спидометра в локальных координатах Display: lCx = 0
-            // => центр тахометра: rCx = w
-            // Вертикальный центр гаджа в локальных Y координатах Display:
-            //   gaugeCY_local = gaugeCY - displayY
-            //                 = gaugeCY - (gaugeCY - gaugeR + displayPadV)
-            //                 = gaugeR - displayPadV
-            //                 = gaugeR - gaugeSize*0.085
-            //                 = gaugeR - 2*gaugeR*0.085
-            //                 = gaugeR * (1 - 0.17) = gaugeR * 0.83
-            var cy = gr * 0.83
+            var rTopAngle = Math.atan2(-topD, -(Math.sqrt(Math.max(0, R*R - topD*topD))))
+            var rBotAngle = Math.atan2( botD, -(Math.sqrt(Math.max(0, R*R - botD*botD))))
+            var lBotAngle = Math.atan2( botD,  (Math.sqrt(Math.max(0, R*R - botD*botD))))
+            var lTopAngle = Math.atan2(-topD,  (Math.sqrt(Math.max(0, R*R - topD*topD))))
 
-            // Симметричная система координат
-            var panelCx = w * 0.5
-            var halfGaugeDistance = w * 0.5
-
-            var lCx = panelCx - halfGaugeDistance
-            var rCx = panelCx + halfGaugeDistance
-
-            // Углы вогнутых дуг:
-            // Левая вогнутость: берём правую половину окружности спидометра,
-            //   от верхней точки пересечения с Display до нижней.
-            //   Верх Display: y=0  => dy_top = cy - 0 = cy
-            //   Низ Display:  y=h  => dy_bot = h - cy
-            var sinTop = Math.min(0.9999, cy / gr)
-            var sinBot = Math.min(0.9999, (h - cy) / gr)
-            var aTop = Math.asin(sinTop)   // угол от горизонтали до верхней точки
-            var aBot = Math.asin(sinBot)   // угол от горизонтали до нижней точки
-
-            // Для левой вогнутости (центр lCx=0):
-            //   правая полудуга идёт от угла -aTop (вверх-вправо) до aBot (вниз-вправо)
-            //   НО рисуем её В ОБРАТНУЮ СТОРОНУ (clockwise = false → counter-clockwise)
-            //   чтобы получить вырез внутрь.
-            //   Точки: верх=(gr*cos(aTop), cy-cy) и низ=(gr*cos(aBot), h-cy+cy)
-            //   Угол от центра (0,cy):
-            //     верхняя точка: atan2(0-cy, xTop-0) = atan2(-cy, cos(aTop)*gr)
-            //     упрощённо: верхняя точка на дуге при y=0 → угол = -aTop (от оси X)
-            //                нижняя точка при y=h → угол = aBot
-            // Контур панели (по часовой стрелке):
-            var xTopLeft  = Math.sqrt(gr*gr - cy*cy)            // X верхней точки левой дуги
-            var xBotLeft  = Math.sqrt(gr*gr - (h-cy)*(h-cy))    // X нижней точки левой дуги
-            var xTopRight = w - xTopLeft                         // X верхней точки правой дуги
-            var xBotRight = w - xBotLeft                         // X нижней точки правой дуги
+            var topLeftX  = lCX + Math.sqrt(Math.max(0, R*R - topD*topD))
+            var topRightX = rCX - Math.sqrt(Math.max(0, R*R - topD*topD))
+            var botLeftX  = lCX + Math.sqrt(Math.max(0, R*R - botD*botD))
 
             ctx.beginPath()
-            // Верхний край: от верхней точки левой дуги до верхней точки правой
-            ctx.moveTo(xTopLeft, 0)
-            ctx.lineTo(xTopRight, 0)
-            // Правая вогнутая дуга: от верхней точки до нижней, counter-clockwise
-            // Центр (w, cy), от угла π+aTop (вверх-влево) до π-aBot (вниз-влево)
-            ctx.arc(rCx, cy, gr, Math.PI - aTop, Math.PI + aBot, false)
-            // Нижний край: от нижней точки правой до нижней точки левой
-            ctx.lineTo(xBotLeft, h)
-            // Левая вогнутая дуга: от нижней точки до верхней, counter-clockwise
-            // Центр (0, cy), от угла aBot (вниз-вправо) до -aTop (вверх-вправо), clockwise = true (по дуге вправо)
-            ctx.arc(lCx, cy, gr, aBot, -aTop, true)
+            ctx.moveTo(topLeftX, 0)
+            ctx.lineTo(topRightX, 0)
+            ctx.arc(rCX, cy, R, rTopAngle, rBotAngle, true)
+            ctx.lineTo(botLeftX, height)
+            ctx.arc(lCX, cy, R, lBotAngle, lTopAngle, true)
             ctx.closePath()
 
-            // Фон
-            // var bg = ctx.createLinearGradient(0, 0, 0, h)
-            // bg.addColorStop(0.00, "#171B24")
-            // bg.addColorStop(0.35, "#111418")
-            // bg.addColorStop(0.65, "#0E1016")
-            // bg.addColorStop(1.00, "#090C11")
-            // ctx.fillStyle = bg; ctx.fill()
-
-            // Стеклянный блик сверху
-            // ctx.save(); ctx.clip()
-            // var hiGrd = ctx.createLinearGradient(0, 0, 0, h * 0.22)
-            // hiGrd.addColorStop(0.0, "rgba(50,62,82,0.40)")
-            // hiGrd.addColorStop(1.0, "rgba(0,0,0,0.00)")
-            // ctx.fillStyle = hiGrd; ctx.fillRect(0, 0, w, h * 0.22)
-
-            // var botGrd = ctx.createLinearGradient(0, h * 0.80, 0, h)
-            // botGrd.addColorStop(0.0, "rgba(0,0,0,0.00)")
-            // botGrd.addColorStop(1.0, "rgba(0,0,0,0.15)")
-            // ctx.fillStyle = botGrd; ctx.fillRect(0, h * 0.80, w, h * 0.20)
-            // ctx.restore()
-
-            // Верхняя и нижняя рамки
-            ctx.strokeStyle = "rgba(80,95,115,0.75)"
-            ctx.lineWidth = 1.5
-            ctx.beginPath(); ctx.moveTo(xTopLeft + 2, 0); ctx.lineTo(xTopRight - 2, 0); ctx.stroke()
-            ctx.strokeStyle = "rgba(50,60,75,0.50)"
-            ctx.lineWidth = 1.5
-            ctx.beginPath(); ctx.moveTo(xBotLeft + 2, h); ctx.lineTo(xBotRight - 2, h); ctx.stroke()
-
-            // Боковые вогнутые дуги — тонкая рамка
-            // ctx.strokeStyle = "rgba(65,78,96,0.60)"
-            // ctx.lineWidth = 1.0
-            // ctx.beginPath()
-            // ctx.arc(rCx, cy, gr - 0.5, Math.PI - aTop, Math.PI + aBot, false)
-            // ctx.stroke()
-            // ctx.beginPath()
-            // ctx.arc(lCx, cy, gr - 0.5, aBot, -aTop, true)
-            // ctx.stroke()
+            // Чисто чёрный фон, совпадает с фоном кластера
+            ctx.fillStyle = "#07080D"
+            ctx.fill()
         }
 
-        Connections {
-            target: root
-            function onGaugeRChanged()      { bgCanvas.requestPaint() }
-            function onSideOverlapChanged() { bgCanvas.requestPaint() }
-            function onWidthChanged()       { bgCanvas.requestPaint() }
-            function onHeightChanged()      { bgCanvas.requestPaint() }
-        }
+        onWidthChanged:  requestPaint()
+        onHeightChanged: requestPaint()
     }
+    onArcRChanged:        bgCanvas.requestPaint()
+    onSpeedCXLocalChanged: bgCanvas.requestPaint()
+    onRpmCXLocalChanged:   bgCanvas.requestPaint()
+    onGaugeCYLocalChanged: bgCanvas.requestPaint()
 
-    // ── КОНТЕНТНАЯ ЗОНА ───────────────────────────────────────────────────────
+    // ── Контент ──────────────────────────────────────────────────────────────────
     Item {
         id: content
-        anchors {
-            fill:        parent
-            // Отступаем от боковых вогнутых дуг: дуга уходит вглубь на gaugeR от края,
-            // самая узкая точка — у центра гаджа (y = cy), там дуга = 0px от края.
-            // Берём ~60% от gaugeR как безопасный горизонтальный отступ.
-            leftMargin:  root.gaugeR * 0.62
-            rightMargin: root.gaugeR * 0.62
-        }
+        property real narrowLeftX:  root.shapeEdgesAtY(root.gaugeCYLocal).leftX
+        property real narrowRightX: root.shapeEdgesAtY(root.gaugeCYLocal).rightX
+        property real safeMargin:   root.width * 0.02
+
+        x:      narrowLeftX + safeMargin
+        y:      root.height * 0.03
+        width:  narrowRightX - narrowLeftX - safeMargin * 2
+        height: root.height - root.height * 0.06
         clip: true
         z: 1
+        opacity: root.hasCritical ? 0.0 : 1.0
+        Behavior on opacity { NumberAnimation { duration: 400 } }
 
-        // ── ШАПКА ────────────────────────────────────────────────────────────
+        // ═══ Шапка: время слева, иконки по центру, дата справа ═══
         Item {
-            id: headerZone
+            id: header
             anchors { left: parent.left; right: parent.right; top: parent.top }
-            height: root.height * 0.195
+            height: root.height * 0.12
 
-            // Тонкий разделитель шапки
-            Rectangle {
-                anchors { bottom: parent.bottom; left: parent.left; right: parent.right
-                          leftMargin: parent.width*0.04; rightMargin: parent.width*0.04 }
-                height: 1
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: "transparent" }
-                    GradientStop { position: 0.3; color: "#2A3040" }
-                    GradientStop { position: 0.7; color: "#2A3040" }
-                    GradientStop { position: 1.0; color: "transparent" }
-                }
-            }
-
-            // Время — слева
             Column {
-                anchors { left: parent.left; leftMargin: parent.width*0.06
-                          verticalCenter: parent.verticalCenter }
+                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                 spacing: 1
                 Text {
                     id: clockTxt
-                    text: Qt.formatTime(new Date(), "hh:mm")
-                    font.family: "Microgramma"; font.pixelSize: root.height * 0.050
+                    text: Qt.formatTime(new Date(), "HH:mm")
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.052
                     color: "#CBD2DC"
-                    Timer { interval: 1000; running: true; repeat: true
-                        onTriggered: clockTxt.text = Qt.formatTime(new Date(), "hh:mm") }
+                    Timer {
+                        interval: 1000; running: true; repeat: true
+                        onTriggered: clockTxt.text = Qt.formatTime(new Date(), "HH:mm")
+                    }
                 }
                 Text {
                     text: Qt.formatDate(new Date(), "ddd").toUpperCase()
@@ -201,54 +144,64 @@ Item {
                 }
             }
 
-            // ENGINE STATUS badge — центр
-            Item {
+            Row {
                 anchors.centerIn: parent
-                width: parent.width * 0.36; height: root.height * 0.080
+                spacing: parent.width * 0.04
+
+                Image {
+                    width: root.height * 0.032; height: width
+                    source: "qrc:/assets/icons/low_beam.png"
+                    fillMode: Image.PreserveAspectFit; smooth: true
+                    visible: root.dm ? root.dm.lowBeam : false
+                }
+                Image {
+                    width: root.height * 0.032; height: width
+                    source: "qrc:/assets/icons/high_beam.png"
+                    fillMode: Image.PreserveAspectFit; smooth: true
+                    visible: root.dm ? root.dm.highBeam : false
+                }
+                Image {
+                    width: root.height * 0.032; height: width
+                    source: "qrc:/assets/icons/fog.png"
+                    fillMode: Image.PreserveAspectFit; smooth: true
+                    visible: root.dm ? root.dm.fogLights : false
+                }
 
                 Rectangle {
-                    anchors.fill: parent
+                    width: root.height * 0.16; height: root.height * 0.036
                     radius: height / 2
-                    color: root.dm && root.dm.engineRunning ? "#0E1E13" : "#160B0D"
-                    border.width: 1
-                    border.color: root.dm && root.dm.engineRunning ? "#2A6640" : "#3D1E24"
-                    Behavior on border.color { ColorAnimation { duration: 600; easing.type: Easing.InOutQuad } }
-                    Behavior on color        { ColorAnimation { duration: 600; easing.type: Easing.InOutQuad } }
-
-                    Rectangle {
-                        anchors { fill: parent; margins: 1 }
-                        radius: parent.radius - 1
-                        color: "transparent"
-                        border.width: 1
-                        border.color: root.dm && root.dm.engineRunning
-                                      ? Qt.rgba(48/255, 209/255, 88/255, 0.18) : Qt.rgba(180/255, 60/255, 70/255, 0.12)
-                        Behavior on border.color { ColorAnimation { duration: 600; easing.type: Easing.InOutQuad } }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: root.dm && root.dm.engineRunning ? "ENGINE ON" : "ENGINE OFF"
-                        font.family: "Microgramma"; font.pixelSize: root.height * 0.026
-                        font.letterSpacing: 1.5
-                        color: root.dm && root.dm.engineRunning ? "#5ED882" : "#8A5560"
-                        Behavior on color { ColorAnimation { duration: 600; easing.type: Easing.InOutQuad } }
+                    visible: root.dm ? root.dm.cruiseActive : false
+                    color: "#0D1A12"; border.width: 1; border.color: "#224433"
+                    Row {
+                        anchors.centerIn: parent; spacing: 4
+                        Text {
+                            text: "КРУИЗ"
+                            font.family: "Microgramma"; font.pixelSize: root.height * 0.013
+                            color: "#6DC88A"; font.letterSpacing: 1.0
+                        }
+                        Text {
+                            text: (root.sim && root.sim.cruiseTarget > 0)
+                                  ? Math.round(root.sim.cruiseTarget) : "—"
+                            font.family: "Microgramma"; font.pixelSize: root.height * 0.013
+                            color: "#A8E8BC"
+                        }
                     }
                 }
             }
 
-            // Дата — справа
             Column {
-                anchors { right: parent.right; rightMargin: parent.width*0.06
-                          verticalCenter: parent.verticalCenter }
+                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                 spacing: 1
                 Text {
                     id: dateTxt
                     anchors.right: parent.right
                     text: Qt.formatDate(new Date(), "dd.MM")
-                    font.family: "Microgramma"; font.pixelSize: root.height * 0.050
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.052
                     color: "#CBD2DC"
-                    Timer { interval: 60000; running: true; repeat: true
-                        onTriggered: dateTxt.text = Qt.formatDate(new Date(), "dd.MM") }
+                    Timer {
+                        interval: 60000; running: true; repeat: true
+                        onTriggered: dateTxt.text = Qt.formatDate(new Date(), "dd.MM")
+                    }
                 }
                 Text {
                     anchors.right: parent.right
@@ -257,319 +210,432 @@ Item {
                     color: "#485060"; font.letterSpacing: 1.5
                 }
             }
-        }
-
-        // ── ЦЕНТРАЛЬНАЯ ЗОНА ──────────────────────────────────────────────────
-        Item {
-            id: centerZone
-            anchors {
-                left: parent.left; right: parent.right
-                top: headerZone.bottom; bottom: footerZone.top
-            }
-
-            // Cruise badge
-            Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: parent.top; anchors.topMargin: root.height * 0.012
-                width: parent.width * 0.38; height: root.height * 0.058; radius: 8
-                visible: root.dm ? root.dm.cruiseActive : false
-                opacity: visible ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.InOutQuad } }
-                color: "#0D1A12"
-                border.width: 1; border.color: "#224433"
-                Row {
-                    anchors.centerIn: parent; spacing: 10
-                    Text { text: "CRUISE"; font.family: "Microgramma"
-                           font.pixelSize: root.height * 0.020; color: "#6DC88A"; font.letterSpacing: 2 }
-                    Text {
-                        text: (root.sim && root.sim.cruiseTarget > 0)
-                              ? Math.round(root.sim.cruiseTarget) + " km/h" : "HOLD"
-                        font.family: "Microgramma"; font.pixelSize: root.height * 0.020
-                        color: "#A8E8BC"; font.letterSpacing: 1
-                    }
-                }
-            }
-
-            // Скорость — основной элемент
-            Column {
-                anchors.centerIn: parent
-                anchors.verticalCenterOffset: -root.height * 0.008
-                spacing: -root.height * 0.005
-                opacity: root.hasCritical ? 0.0 : 1.0
-                Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.InOutQuad } }
-
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: Math.round(root.dm ? root.dm.speed : 0).toString()
-                    font.family: "Microgramma"
-                    font.pixelSize: root.height * 0.255
-                    color: root.speedColor
-                    horizontalAlignment: Text.AlignHCenter
-                    Behavior on color { ColorAnimation { duration: 500; easing.type: Easing.InOutQuad } }
-                }
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: "KM / H"
-                    font.family: "Microgramma"; font.pixelSize: root.height * 0.026
-                    font.letterSpacing: 5.0; color: "#3A4252"
-                    horizontalAlignment: Text.AlignHCenter
-                }
-            }
-
-            // Критическое предупреждение
-            Rectangle {
-                anchors.centerIn: parent
-                width: parent.width * 0.82
-                height: Math.min(critList.contentHeight + root.height * 0.09, parent.height * 0.82)
-                radius: 12
-                visible: root.hasCritical
-                opacity: root.hasCritical ? 1.0 : 0.0
-                color: "#1C0706"; border.width: 1; border.color: "#882018"
-
-                SequentialAnimation on opacity {
-                    running: root.hasCritical; loops: Animation.Infinite
-                    NumberAnimation { from: 1.0;  to: 0.40; duration: 550; easing.type: Easing.InOutQuad }
-                    NumberAnimation { from: 0.40; to: 1.0;  duration: 550; easing.type: Easing.InOutQuad }
-                }
-
-                Rectangle {
-                    anchors { left: parent.left; right: parent.right; top: parent.top }
-                    anchors.margins: parent.radius; height: 1
-                    color: "#FF3B30"; opacity: 0.30
-                }
-
-                Image {
-                    anchors.top: parent.top; anchors.topMargin: root.height * 0.010
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    width: root.height * 0.038; height: width
-                    source: "qrc:/assets/icons/red_triangle.png"
-                    fillMode: Image.PreserveAspectFit; smooth: true; opacity: 0.80
-                }
-
-                ListView {
-                    id: critList
-                    anchors { top: parent.top; bottom: parent.bottom
-                              left: parent.left; right: parent.right }
-                    anchors.topMargin: root.height * 0.068
-                    anchors.bottomMargin: root.height * 0.016
-                    clip: true; spacing: root.height * 0.006
-                    model: root.criticalLabels
-                    delegate: Text {
-                        required property string modelData
-                        width: critList.width; text: modelData
-                        horizontalAlignment: Text.AlignHCenter
-                        font.family: "Microgramma"
-                        font.pixelSize: root.height * 0.030
-                        font.letterSpacing: 1.5
-                        color: "#FF7068"
-                    }
-                }
-            }
-
-            // Фары + поворотники
-            Item {
-                anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-                height: root.height * 0.13
-
-                Rectangle {
-                    anchors { left: parent.left; right: parent.right; top: parent.top }
-                    anchors.leftMargin: parent.width*0.06; anchors.rightMargin: parent.width*0.06
-                    height: 1
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: "transparent" }
-                        GradientStop { position: 0.2; color: "#242933" }
-                        GradientStop { position: 0.8; color: "#242933" }
-                        GradientStop { position: 1.0; color: "transparent" }
-                    }
-                }
-
-                Row {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.top: parent.top; anchors.topMargin: root.height * 0.010
-                    spacing: parent.width * 0.04
-                    Image { width: root.height*0.044; height: width
-                            source: "qrc:/assets/icons/low_beam.png"
-                            fillMode: Image.PreserveAspectFit
-                            visible: root.dm ? root.dm.lowBeam  : false }
-                    Image { width: root.height*0.044; height: width
-                            source: "qrc:/assets/icons/high_beam.png"
-                            fillMode: Image.PreserveAspectFit
-                            visible: root.dm ? root.dm.highBeam : false }
-                    Image { width: root.height*0.044; height: width
-                            source: "qrc:/assets/icons/fog.png"
-                            fillMode: Image.PreserveAspectFit
-                            visible: root.dm ? root.dm.fogLights: false }
-                }
-
-                TurnSignals {
-                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-                    anchors.bottomMargin: root.height * 0.006
-                    anchors.leftMargin:   parent.width * 0.05
-                    anchors.rightMargin:  parent.width * 0.05
-                    height: parent.height * 0.44
-                }
-            }
-        }
-
-        // ── ПОДВАЛ ───────────────────────────────────────────────────────────
-        Item {
-            id: footerZone
-            anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-            height: root.height * 0.215
 
             Rectangle {
-                anchors { left: parent.left; right: parent.right; top: parent.top }
-                anchors.leftMargin: parent.width*0.05; anchors.rightMargin: parent.width*0.05
+                anchors { bottom: parent.bottom; left: parent.left; right: parent.right
+                          leftMargin: parent.width * 0.04; rightMargin: parent.width * 0.04 }
                 height: 1
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.0; color: "transparent" }
-                    GradientStop { position: 0.15; color: "#222833" }
-                    GradientStop { position: 0.85; color: "#222833" }
+                    GradientStop { position: 0.3; color: "#1A2030" }
+                    GradientStop { position: 0.7; color: "#1A2030" }
                     GradientStop { position: 1.0; color: "transparent" }
                 }
             }
+        }
 
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin:   parent.width * 0.05
-                anchors.rightMargin:  parent.width * 0.05
-                anchors.topMargin:    root.height * 0.010
-                anchors.bottomMargin: root.height * 0.010
-                spacing: 0
+        // ═══ Основная зона: УДЕРЖАНИЕ В ПОЛОСЕ (LKAS) ═══
+        Item {
+            id: laneZone
+            anchors { left: parent.left; right: parent.right
+                      top: header.bottom; bottom: sep2.top }
 
-                // ── ОДОМЕТР ──────────────────────────────────────────────────
-                Column {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
-                    spacing: 3
+            // Активна ли система: включена И двигатель работает
+            readonly property bool lkActive: root.dm ? (root.dm.laneAssist && root.dm.engineRunning) : false
 
-                    Text {
-                        text: Math.round(root.dm ? root.dm.odometer : 0)
-                                   .toLocaleString(Qt.locale("en_US"), "f", 0)
-                        font.family: "Microgramma"
-                        font.pixelSize: root.height * 0.052
-                        color: "#C2CAD4"
-                    }
-                    Row {
-                        spacing: 6
-                        Rectangle { width: 8; height: 2; radius: 1; color: "#FF3B30"; anchors.verticalCenter: parent.verticalCenter }
-                        Text {
-                            text: "ODO KM"
-                            font.family: "Microgramma"; font.pixelSize: root.height * 0.018
-                            font.letterSpacing: 1.5; color: "#3E4858"
-                        }
-                    }
+            // Заголовок системы + статус
+            Row {
+                id: laneTitle
+                anchors { top: parent.top; topMargin: root.height * 0.010
+                          horizontalCenter: parent.horizontalCenter }
+                spacing: root.height * 0.014
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "УДЕРЖАНИЕ В ПОЛОСЕ"
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.020
+                    font.letterSpacing: 2.5
+                    color: laneZone.lkActive ? "#C9543F" : "#46505F"
+                    Behavior on color { ColorAnimation { duration: 300 } }
                 }
-
-                // Вертикальный разделитель
                 Rectangle {
-                    width: 1; Layout.fillHeight: true
-                    Layout.topMargin: 8; Layout.bottomMargin: 8
-                    color: "#1E2530"
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: stBadge.width + root.height * 0.022; height: root.height * 0.026
+                    radius: height / 2
+                    color: laneZone.lkActive ? "#1A0604" : "#0C0E12"
+                    border.width: 1
+                    border.color: laneZone.lkActive ? "#7A271C" : "#222833"
+                    Behavior on color { ColorAnimation { duration: 300 } }
+                    // мягкое пульсирование индикатора при активной системе
+                    Rectangle {
+                        anchors { left: parent.left; leftMargin: root.height*0.010
+                                  verticalCenter: parent.verticalCenter }
+                        width: root.height*0.009; height: width; radius: width/2
+                        visible: laneZone.lkActive
+                        color: "#FF3B30"
+                        SequentialAnimation on opacity {
+                            running: laneZone.lkActive; loops: Animation.Infinite
+                            NumberAnimation { from: 1.0; to: 0.25; duration: 700; easing.type: Easing.InOutSine }
+                            NumberAnimation { from: 0.25; to: 1.0; duration: 700; easing.type: Easing.InOutSine }
+                        }
+                    }
+                    Text {
+                        id: stBadge
+                        anchors.centerIn: parent
+                        anchors.horizontalCenterOffset: laneZone.lkActive ? root.height*0.006 : 0
+                        text: laneZone.lkActive ? "АКТИВНО" : "ВЫКЛ"
+                        font.family: "Microgramma"; font.pixelSize: root.height * 0.0115
+                        font.letterSpacing: 1.0
+                        color: laneZone.lkActive ? "#FF6A5C" : "#46505F"
+                    }
+                }
+            }
+
+            // Запас хода — компактно, в правом верхнем углу зоны
+            Column {
+                anchors { right: parent.right; top: parent.top; topMargin: root.height * 0.004 }
+                spacing: 0
+                Text {
+                    anchors.right: parent.right
+                    text: "ЗАПАС ХОДА"
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.014
+                    font.letterSpacing: 1.2; color: "#3E4858"
+                }
+                Text {
+                    anchors.right: parent.right
+                    text: {
+                        if (!(root.dm && root.dm.engineRunning)) return "—"
+                        var r = root.rangeKm
+                        return r > 0 ? "~" + Math.round(r) + " км" : "—"
+                    }
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.026
+                    color: {
+                        var r = root.rangeKm
+                        if (!(root.dm && root.dm.engineRunning) || r <= 0) return "#3E4858"
+                        if (r <= 50) return "#FF3B30"
+                        if (r <= 100) return "#FFB300"
+                        return "#AEB8C6"
+                    }
+                }
+            }
+
+            // Перспективная дорога + полоса + треугольник-«машина»
+            Canvas {
+                id: laneCanvas
+                anchors { left: parent.left; right: parent.right
+                          top: laneTitle.bottom; bottom: parent.bottom
+                          topMargin: root.height * 0.008
+                          leftMargin: root.width * 0.04; rightMargin: root.width * 0.04 }
+
+                property real phase:  0.0                  // фаза «движения» разметки
+                property bool active: laneZone.lkActive
+                onActiveChanged: requestPaint()
+
+                onPaint: {
+                    var ctx = getContext("2d")
+                    ctx.clearRect(0, 0, width, height)
+                    var w = width, h = height
+                    if (w < 20 || h < 20) return
+
+                    // Цвета: активна — красный, выключена — приглушённый серый
+                    var cMain = active ? "255,59,48"   : "92,102,116"
+                    var cHot  = active ? "255,150,130" : "150,160,172"
+                    var dim   = active ? 1.0 : 0.55
+
+                    var vpX = w * 0.5,  vpY = h * 0.05          // точка схода
+                    var blX = w * 0.06, brX = w * 0.94          // низ полосы (шире)
+                    var byY = h * 0.99
+                    var tlX = vpX - w * 0.040                   // верх (узкий зазор у схода)
+                    var trX = vpX + w * 0.040
+                    var tY  = vpY
+
+                    // 1) Заливка эго-полосы — градиент, гаснет вверх
+                    var grad = ctx.createLinearGradient(0, byY, 0, tY)
+                    grad.addColorStop(0.0,  "rgba(" + cMain + "," + (0.16*dim).toFixed(3) + ")")
+                    grad.addColorStop(0.55, "rgba(" + cMain + "," + (0.05*dim).toFixed(3) + ")")
+                    grad.addColorStop(1.0,  "rgba(" + cMain + ",0.0)")
+                    ctx.beginPath()
+                    ctx.moveTo(blX, byY); ctx.lineTo(tlX, tY)
+                    ctx.lineTo(trX, tY);  ctx.lineTo(brX, byY); ctx.closePath()
+                    ctx.fillStyle = grad; ctx.fill()
+
+                    // 2) Поперечные перспективные «рейки» — бегут на зрителя (только активно)
+                    var ph = active ? phase : 0
+                    var rungs = 7
+                    for (var i = 0; i < rungs; i++) {
+                        var p = ((i + ph) % rungs) / rungs
+                        var t = Math.pow(p, 2.3)                // плотнее у схода
+                        var ry = tY + (byY - tY) * t
+                        var lx = tlX + (blX - tlX) * t
+                        var rx = trX + (brX - trX) * t
+                        var a  = (0.03 + 0.16 * t) * dim
+                        ctx.strokeStyle = "rgba(" + cHot + "," + a.toFixed(3) + ")"
+                        ctx.lineWidth = 0.8 + 1.4 * t
+                        ctx.beginPath(); ctx.moveTo(lx, ry); ctx.lineTo(rx, ry); ctx.stroke()
+                    }
+
+                    // 3) Границы полосы — светящиеся линии (многослойный glow)
+                    function laneLine(x0, y0, x1, y1) {
+                        var passes = [ [11, 0.05], [6, 0.11], [2.6, 0.50], [1.2, 0.95] ]
+                        ctx.lineCap = "round"
+                        for (var k = 0; k < passes.length; k++) {
+                            ctx.strokeStyle = "rgba(" + cMain + "," + (passes[k][1]*dim).toFixed(3) + ")"
+                            ctx.lineWidth = passes[k][0]
+                            ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke()
+                        }
+                    }
+                    laneLine(blX, byY, tlX, tY)
+                    laneLine(brX, byY, trX, tY)
+
+                    // 4) Треугольник-«машина» (как курсор навигации) у низа полосы
+                    var cx = w * 0.5
+                    var apexY = h * 0.46
+                    var baseY = h * 0.86
+                    var hw    = w * 0.058
+                    var notch = (baseY - apexY) * 0.30
+                    function triPath() {
+                        ctx.beginPath()
+                        ctx.moveTo(cx, apexY)
+                        ctx.lineTo(cx + hw, baseY)
+                        ctx.lineTo(cx, baseY - notch)
+                        ctx.lineTo(cx - hw, baseY)
+                        ctx.closePath()
+                    }
+                    // Свечение вокруг (расширяющиеся обводки)
+                    ctx.lineJoin = "round"
+                    var gp = [ [13, 0.06], [8, 0.12], [4, 0.22] ]
+                    for (var gi = 0; gi < gp.length; gi++) {
+                        triPath()
+                        ctx.strokeStyle = "rgba(" + cMain + "," + (gp[gi][1]*dim).toFixed(3) + ")"
+                        ctx.lineWidth = gp[gi][0]; ctx.stroke()
+                    }
+                    // Основная заливка с градиентом
+                    var tg = ctx.createLinearGradient(cx, apexY, cx, baseY)
+                    tg.addColorStop(0.0, "rgba(" + cHot  + "," + (0.98*dim).toFixed(3) + ")")
+                    tg.addColorStop(1.0, "rgba(" + cMain + "," + (0.72*dim).toFixed(3) + ")")
+                    triPath(); ctx.fillStyle = tg; ctx.fill()
+                    // Контур
+                    triPath()
+                    ctx.strokeStyle = "rgba(" + cHot + "," + (0.95*dim).toFixed(3) + ")"
+                    ctx.lineWidth = 1.4; ctx.stroke()
                 }
 
-                // ── ТЕМПЕРАТУРА + БАР ─────────────────────────────────────────
-                Column {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
-                    spacing: 5
+                onWidthChanged:  requestPaint()
+                onHeightChanged: requestPaint()
+                onPhaseChanged:  requestPaint()
 
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: Math.round(root.dm ? root.dm.engineTemp : 0) + "°"
-                        font.family: "Microgramma"
-                        font.pixelSize: root.height * 0.056
-                        color: {
-                            var t = root.dm ? root.dm.engineTemp : 0
-                            return t < 60 ? "#4A8FD4" : t < 90 ? "#30D158" : t < 110 ? "#FFCC00" : "#FF3B30"
+                // Анимация бегущей разметки — только когда система активна
+                Timer {
+                    interval: 70; repeat: true
+                    running: laneZone.lkActive
+                    onTriggered: laneCanvas.phase = (laneCanvas.phase + 0.12) % 7
+                }
+            }
+        }
+
+        // ═══ Разделитель ═══
+        Rectangle {
+            id: sep2
+            anchors { bottom: dataZone.top; left: parent.left; right: parent.right
+                      leftMargin: parent.width * 0.03; rightMargin: parent.width * 0.03 }
+            height: 1; color: "#1A2030"
+        }
+
+        // ═══ Зона данных ═══
+        Item {
+            id: dataZone
+            anchors { left: parent.left; right: parent.right; bottom: fuelBar.top }
+            anchors.bottomMargin: root.height * 0.008
+            height: root.height * 0.210
+
+            Column {
+                anchors.fill: parent
+                spacing: root.height * 0.008
+
+                // Строка 1: Пробег | Расход
+                Row {
+                    width: parent.width; height: root.height * 0.072
+
+                    Item {
+                        width: parent.width * 0.5; height: parent.height
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter; spacing: 2
+                            Text {
+                                text: "ПРОБЕГ"
+                                font.family: "Microgramma"; font.pixelSize: root.height * 0.018
+                                font.letterSpacing: 1.5; color: "#3E4858"
+                            }
+                            Text {
+                                text: {
+                                    var km = Math.round(root.dm ? root.dm.odometer : 0)
+                                    return km.toLocaleString(Qt.locale("ru_RU"), "f", 0) + " км"
+                                }
+                                font.family: "Microgramma"; font.pixelSize: root.height * 0.042
+                                color: "#C2CAD4"
+                            }
                         }
-                        Behavior on color { ColorAnimation { duration: 500; easing.type: Easing.InOutQuad } }
                     }
 
                     Item {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        width: parent.parent.width * 0.70
-                        height: root.height * 0.022
-
-                        Rectangle {
-                            anchors.fill: parent; radius: height/2
-                            color: "#0A0C10"
-                            border.width: 1; border.color: "#1A2030"
-                        }
-
-                        Rectangle {
-                            anchors { left: parent.left; top: parent.top
-                                      bottom: parent.bottom; margins: 2 }
-                            radius: height / 2
-                            readonly property real tNorm: {
-                                var t = root.dm ? root.dm.engineTemp : 0
-                                return t <= 20 ? 0.0 : t >= 130 ? 1.0 : (t-20.0)/110.0
+                        width: parent.width * 0.5; height: parent.height
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.right: parent.right; spacing: 2
+                            Text {
+                                anchors.right: parent.right; text: "РАСХОД"
+                                font.family: "Microgramma"; font.pixelSize: root.height * 0.018
+                                font.letterSpacing: 1.5; color: "#3E4858"
                             }
-                            width: Math.max(height, (parent.width - 4) * tNorm)
-                            color: {
-                                var t = root.dm ? root.dm.engineTemp : 0
-                                return t < 60 ? "#2A6AAA" : t < 85 ? "#1A8040" : t < 110 ? "#AA8800" : "#CC2A1A"
+                            Text {
+                                anchors.right: parent.right
+                                text: {
+                                    if (!(root.dm && root.dm.engineRunning)) return "—.— л/100"
+                                    var f = root.sim ? root.sim.fuelL100 : -1
+                                    return f >= 0 ? f.toFixed(1) + " л/100" : "—.— л/100"
+                                }
+                                font.family: "Microgramma"; font.pixelSize: root.height * 0.042
+                                color: {
+                                    if (!(root.dm && root.dm.engineRunning)) return "#2E3848"
+                                    var f = root.sim ? root.sim.fuelL100 : -1
+                                    if (f < 0) return "#2E3848"
+                                    return f > 20 ? "#FF3B30" : f > 12 ? "#FFCC00" : "#C2CAD4"
+                                }
+                                Behavior on color { ColorAnimation { duration: 500 } }
                             }
-                            Behavior on width { NumberAnimation { duration: 700; easing.type: Easing.OutCubic } }
-                            Behavior on color { ColorAnimation { duration: 500; easing.type: Easing.InOutQuad } }
-
-                            Rectangle {
-                                anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: 1 }
-                                height: parent.height * 0.4; radius: height/2
-                                color: Qt.rgba(1, 1, 1, 0.12)
-                            }
-                        }
-
-                        Rectangle {
-                            x: (parent.width - 4) * (70.0/110.0) + 2
-                            anchors { top: parent.top; bottom: parent.bottom }
-                            width: 1; color: Qt.rgba(48/255, 209/255, 88/255, 0.30)
                         }
                     }
                 }
 
-                // Вертикальный разделитель
-                Rectangle {
-                    width: 1; Layout.fillHeight: true
-                    Layout.topMargin: 8; Layout.bottomMargin: 8
-                    color: "#1E2530"
+                // Строка 2: Температура ДВС | Средний расход
+                Row {
+                    width: parent.width; height: root.height * 0.072
+
+                    Item {
+                        width: parent.width * 0.5; height: parent.height
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter; spacing: 2
+                            Text {
+                                text: "ТЕМП. ДВС"
+                                font.family: "Microgramma"; font.pixelSize: root.height * 0.018
+                                font.letterSpacing: 1.5; color: "#3E4858"
+                            }
+                            Text {
+                                text: Math.round(root.dm ? root.dm.engineTemp : 0) + "°C"
+                                font.family: "Microgramma"; font.pixelSize: root.height * 0.042
+                                color: root.tempColor
+                                Behavior on color { ColorAnimation { duration: 500 } }
+                            }
+                        }
+                    }
+
+                    Item {
+                        width: parent.width * 0.5; height: parent.height
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.right: parent.right; spacing: 2
+                            Text {
+                                anchors.right: parent.right; text: "СРЕДНИЙ"
+                                font.family: "Microgramma"; font.pixelSize: root.height * 0.018
+                                font.letterSpacing: 1.5; color: "#3E4858"
+                            }
+                            Text {
+                                anchors.right: parent.right
+                                text: {
+                                    if (!(root.dm && root.dm.engineRunning)) return "—.— л/100"
+                                    var f = root.sim ? root.sim.fuelAvg : 0
+                                    return f > 0 ? f.toFixed(1) + " л/100" : "0.0 л/100"
+                                }
+                                font.family: "Microgramma"; font.pixelSize: root.height * 0.042
+                                color: {
+                                    if (!(root.dm && root.dm.engineRunning)) return "#2E3848"
+                                    var f = root.sim ? root.sim.fuelAvg : 0
+                                    return f > 15 ? "#FF3B30" : f > 10 ? "#FFCC00" : "#C2CAD4"
+                                }
+                                Behavior on color { ColorAnimation { duration: 500 } }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ═══ Полоса топлива ═══
+        Item {
+            id: fuelBar
+            anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+            anchors.bottomMargin: root.height * 0.005
+            height: root.height * 0.055
+
+            Row {
+                anchors.fill: parent
+                spacing: root.height * 0.008
+
+                Image {
+                    width: root.height * 0.024; height: width
+                    source: "qrc:/assets/icons/fuel_low.png"
+                    fillMode: Image.PreserveAspectFit; smooth: true
+                    anchors.verticalCenter: parent.verticalCenter
                 }
 
-                // ── РАСХОД ТОПЛИВА ────────────────────────────────────────────
-                Column {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
-                    spacing: 3
+                Item {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - root.height * 0.024 - fuelPct.width - root.height * 0.024
+                    height: root.height * 0.020
 
-                    Text {
-                        anchors.right: parent.right
-                        text: {
-                            if (!(root.dm && root.dm.engineRunning)) return "– –"
-                            var f = root.sim ? root.sim.fuelAvg : 0
-                            return f > 0 ? f.toFixed(1) : "0.0"
-                        }
-                        font.family: "Microgramma"
-                        font.pixelSize: root.height * 0.052
-                        color: {
-                            if (!(root.dm && root.dm.engineRunning)) return "#2E3848"
-                            var f = root.sim ? root.sim.fuelAvg : 0
-                            return f > 15 ? "#FF3B30" : f > 10 ? "#FFCC00" : "#C2CAD4"
-                        }
-                        Behavior on color { ColorAnimation { duration: 500; easing.type: Easing.InOutQuad } }
+                    Rectangle {
+                        anchors.fill: parent; radius: height / 2
+                        color: "#080A0E"; border.width: 1; border.color: "#1A2030"
                     }
-                    Row {
-                        anchors.right: parent.right
-                        spacing: 6
-                        Text {
-                            text: root.dm && root.dm.engineRunning ? "AVG L/100" : "FUEL AVG"
-                            font.family: "Microgramma"; font.pixelSize: root.height * 0.018
-                            font.letterSpacing: 1.5; color: "#3E4858"
+                    Rectangle {
+                        anchors { left: parent.left; top: parent.top; bottom: parent.bottom; margins: 2 }
+                        width: Math.max(height - 4, (parent.width - 4) * root.fuelNorm)
+                        radius: (parent.height - 4) / 2
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: Qt.darker(root.fuelColor, 1.6) }
+                            GradientStop { position: 1.0; color: root.fuelColor }
                         }
-                        Rectangle { width: 8; height: 2; radius: 1; color: "#4FA3D4"; anchors.verticalCenter: parent.verticalCenter }
+                        Behavior on width { NumberAnimation { duration: 700; easing.type: Easing.OutCubic } }
                     }
                 }
+
+                Text {
+                    id: fuelPct
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Math.round(root.dm ? root.dm.fuelLevel : 0) + "%"
+                    font.family: "Microgramma"; font.pixelSize: root.height * 0.024
+                    color: root.fuelColor
+                    Behavior on color { ColorAnimation { duration: 500 } }
+                }
+            }
+        }
+    }
+
+    // ═══ Критическое предупреждение ═══
+    Rectangle {
+        anchors.centerIn: parent
+        width: parent.width * 0.55; z: 5
+        height: Math.min(critCol.contentHeight + root.height * 0.08, parent.height * 0.72)
+        radius: 12
+        visible: root.hasCritical
+        color: "#1C0706"; border.width: 1; border.color: "#882018"
+
+        SequentialAnimation on opacity {
+            running: root.hasCritical; loops: Animation.Infinite
+            NumberAnimation { from: 1.0; to: 0.40; duration: 550; easing.type: Easing.InOutQuad }
+            NumberAnimation { from: 0.40; to: 1.0; duration: 550; easing.type: Easing.InOutQuad }
+        }
+
+        Image {
+            anchors.top: parent.top; anchors.topMargin: root.height * 0.012
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: root.height * 0.034; height: width
+            source: "qrc:/assets/icons/red_triangle.png"
+            fillMode: Image.PreserveAspectFit; smooth: true; opacity: 0.8
+        }
+
+        ListView {
+            id: critCol
+            anchors { fill: parent; topMargin: root.height * 0.06; bottomMargin: root.height * 0.014
+                      leftMargin: 4; rightMargin: 4 }
+            clip: true; spacing: root.height * 0.005
+            model: root.criticalLabels
+            delegate: Text {
+                required property string modelData
+                width: critCol.width; text: modelData
+                horizontalAlignment: Text.AlignHCenter
+                font.family: "Microgramma"; font.pixelSize: root.height * 0.026
+                font.letterSpacing: 1.5; color: "#FF7068"
             }
         }
     }

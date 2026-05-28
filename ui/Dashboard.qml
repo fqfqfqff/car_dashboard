@@ -19,17 +19,27 @@ Item {
     readonly property real gaugeTop:    gaugeCY - gaugeR
     readonly property real gaugeBottom: gaugeCY + gaugeR
 
-    // Центральная панель растянута до центров гаджей.
-    // Боковые края — вогнутые дуги (вырез внутрь) радиусом gaugeR,
-    // совпадающие ровно с окружностью циферблата.
-    readonly property real displayX: gaugeMarH + gaugeR          // = центр спидометра по X
-    readonly property real displayW: (root.width - gaugeMarH - gaugeR) - displayX  // до центра тахометра
-    readonly property real displayOverlap: gaugeR                // передаём в Display для Canvas
+    // Центры гаджей (для построения дуг центральной панели)
+    readonly property real speedCX: gaugeMarH + gaugeR
+    readonly property real rpmCX:   root.width - gaugeMarH - gaugeR
 
-    // Высота: меньше гаджей на displayPadV с каждой стороны
-    readonly property real displayPadV: gaugeSize * 0.085
+    // Высота панели: отступ displayPadV с каждой стороны.
+    // Увеличен → больше места для стрипов индикаторов (крупнее иконки).
+    readonly property real displayPadV: gaugeSize * 0.108
     readonly property real displayY: gaugeTop    + displayPadV
     readonly property real displayH: gaugeBottom - gaugeTop - displayPadV * 2
+
+    // Радиус видимого диска гаджа (bgR в GaugeItem.cpp ≈ 0.95·gaugeR).
+    // Дуги панели идут точно по нему, чтобы касаться приборов без зазора.
+    readonly property real gaugeArcR: gaugeR * 0.95
+
+    // Горизонтальная протяжённость вогнутых дуг на уровне верхней/нижней границы
+    readonly property real _dispEdgeD:   gaugeCY - displayY   // вертикальное расстояние от центра гаджа до края панели
+    readonly property real _arcAtEdge:   Math.sqrt(Math.max(0, gaugeArcR * gaugeArcR - _dispEdgeD * _dispEdgeD))
+
+    // Item панели охватывает всю фигуру (самая широкая часть — у верхнего/нижнего края)
+    readonly property real displayX: speedCX + _arcAtEdge
+    readonly property real displayW: (rpmCX - _arcAtEdge) - (speedCX + _arcAtEdge)
 
     // Стрипы между верхом гаджей и Display
     readonly property real stripZoneTop:    gaugeTop + gaugeSize * 0.04
@@ -43,7 +53,7 @@ Item {
     readonly property real rpmNorm: Math.min(1.0, dataModel.rpm / 8000.0)
     property real _smoothRpmNorm: 0.0
     Behavior on _smoothRpmNorm {
-        NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: 1000; easing.type: Easing.OutCubic }
     }
     onRpmNormChanged: _smoothRpmNorm = rpmNorm
 
@@ -100,7 +110,7 @@ Item {
         y:      root.stripZoneTop
         width:  root.stripW
         height: Math.max(0, root.stripZoneBottom - root.stripZoneTop)
-        iconSz: Math.min(38, height * 0.80)
+        iconSz: Math.min(80, height * 0.88)
         startupMode:   root.startupPhase === "sweep"
         engineRunning: dataModel.engineRunning
         systemActive:  root.startupPhase !== "idle"
@@ -112,7 +122,7 @@ Item {
         y:      root.warnZoneTop
         width:  root.stripW
         height: Math.max(0, root.warnZoneBottom - root.warnZoneTop)
-        iconSz: Math.min(36, height * 0.80)
+        iconSz: Math.min(80, height * 0.88)
         startupMode:   root.startupPhase === "sweep"
         engineRunning: dataModel.engineRunning
         systemActive:  root.startupPhase !== "idle"
@@ -122,17 +132,21 @@ Item {
     // ── z=2: КОНТУР КЛАСТЕРА ─────────────────────────────────────────────────
     PanelOutline { anchors.fill: parent; z: 2 }
 
-    // ── z=3: ЦЕНТРАЛЬНАЯ ПАНЕЛЬ — под гаджами ────────────────────────────────
-    // Display НЕ заходит под гаджи (displayX = speedInnerX точно).
-    // Боковые дуги внутри Display строятся по gaugeR — визуально стыкуются.
+    // ── z=3: ЦЕНТРАЛЬНАЯ ПАНЕЛЬ ─────────────────────────────────────────────
+    // Боковые дуги — вогнутые, повторяют окружности спидометра / тахометра.
+    // Верх/низ — прямые горизонтальные линии до точек касания с дугами.
     Display {
         id: centerDisplay
         x:      root.displayX
         y:      root.displayY
         width:  root.displayW
         height: root.displayH
-        sideOverlap: root.displayOverlap   // передаём для рисования дуг внутри Canvas
         gaugeR:      root.gaugeR
+        arcR:        root.gaugeArcR
+        // Координаты центров гаджей в локальной системе Display
+        speedCXLocal: root.speedCX - root.displayX
+        rpmCXLocal:   root.rpmCX   - root.displayX
+        gaugeCYLocal: root.gaugeCY - root.displayY
         opacity: root.startupPhase === "idle" ? 0.0 : root.centerUIOpacity
         z: 3
         criticalLabels: indicatorPanel.activeCriticalLabels
@@ -160,7 +174,7 @@ Item {
         x: root.gaugeMarH;  y: root.gaugeCY - root.gaugeR
         width: root.gaugeSize; height: root.gaugeSize
         clip: true
-        minValue: 0; maxValue: 300; step: 20; unit: "km/h"
+        minValue: 0; maxValue: 300; step: 20; unit: "км/ч"
         arcColor: "#FF3B30"; dangerZone: 0.85
         value: dataModel.speed; centerText: ""
         glowIntensity: root._smoothRpmNorm * 2
@@ -181,6 +195,98 @@ Item {
             return dataModel.currentGear.toString()
         }
         z: 5
+    }
+
+    // ── z=4: КРАСНЫЕ АКЦЕНТНЫЕ ЛИНИИ (по верхнему/нижнему краю панели) ───────
+    Rectangle {
+        x: root.displayX
+        y: root.displayY
+        width: root.displayW
+        height: 1.5
+        z: 4
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0;  color: "transparent" }
+            GradientStop { position: 0.06; color: "#CC2820" }
+            GradientStop { position: 0.50; color: "#CC2820" }
+            GradientStop { position: 0.94; color: "#CC2820" }
+            GradientStop { position: 1.0;  color: "transparent" }
+        }
+        opacity: root.startupPhase === "idle" ? 0.0 : root.centerUIOpacity * 0.65
+        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.InOutQuad } }
+    }
+    Rectangle {
+        x: root.displayX
+        y: root.displayY
+        width: root.displayW
+        height: root.height * 0.010
+        z: 3
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Qt.rgba(1.0, 0.16, 0.12, 0.14) }
+            GradientStop { position: 1.0; color: "transparent" }
+        }
+        opacity: root.startupPhase === "idle" ? 0.0 : root.centerUIOpacity
+        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.InOutQuad } }
+    }
+
+    Rectangle {
+        x: root.displayX
+        y: root.displayY + root.displayH - 1.5
+        width: root.displayW
+        height: 1.5
+        z: 4
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0;  color: "transparent" }
+            GradientStop { position: 0.06; color: "#CC2820" }
+            GradientStop { position: 0.50; color: "#CC2820" }
+            GradientStop { position: 0.94; color: "#CC2820" }
+            GradientStop { position: 1.0;  color: "transparent" }
+        }
+        opacity: root.startupPhase === "idle" ? 0.0 : root.centerUIOpacity * 0.55
+        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.InOutQuad } }
+    }
+    Rectangle {
+        x: root.displayX
+        y: root.displayY + root.displayH - root.height * 0.010
+        width: root.displayW
+        height: root.height * 0.010
+        z: 3
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "transparent" }
+            GradientStop { position: 1.0; color: Qt.rgba(1.0, 0.16, 0.12, 0.11) }
+        }
+        opacity: root.startupPhase === "idle" ? 0.0 : root.centerUIOpacity
+        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.InOutQuad } }
+    }
+
+    // ── z=6: ПОВОРОТНИКИ (компактные, в зоне стрипов) ────────────────────────
+    Image {
+        x: root.speedInnerX + root.gaugeSize * 0.015
+        y: root.stripZoneTop + (root.stripZoneBottom - root.stripZoneTop - height) / 2
+        width: root.gaugeSize * 0.060
+        height: width
+        source: "qrc:/assets/icons/turn_left.png"
+        fillMode: Image.PreserveAspectFit
+        smooth: true
+        visible: dataModel.turnLeft
+        opacity: BlinkController.blinkState ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: 80 } }
+        z: 6
+    }
+
+    Image {
+        x: root.rpmInnerX - root.gaugeSize * 0.015 - width
+        y: root.stripZoneTop + (root.stripZoneBottom - root.stripZoneTop - height) / 2
+        width: root.gaugeSize * 0.060
+        height: width
+        source: "qrc:/assets/icons/turn_right.png"
+        fillMode: Image.PreserveAspectFit
+        smooth: true
+        visible: dataModel.turnRight
+        opacity: BlinkController.blinkState ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: 80 } }
+        z: 6
     }
 
     // ── z=0: ПАНЕЛЬ УПРАВЛЕНИЯ ────────────────────────────────────────────────

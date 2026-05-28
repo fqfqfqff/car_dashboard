@@ -32,7 +32,7 @@ Item {
    // Плавное появление подсветки
    property double _smoothGlow: 0.0
    Behavior on _smoothGlow {
-       NumberAnimation { duration: 600; easing.type: Easing.InOutQuad }
+       NumberAnimation { duration: 1200; easing.type: Easing.InOutQuad }
    }
    onGlowIntensityChanged: {
        if (_sweepDone) _smoothGlow = glowIntensity

@@ -64,6 +64,8 @@ Simulator::Simulator(DataModel *model, Controller *controller, QObject *parent)
         m_cruiseActive = false;
         m_wheelSpin    = false;
         emit wheelSpinChanged();
+        // Удержание в полосе отключается вместе с двигателем
+        m_model->setLaneAssist(false);
     });
 
     connect(controller, &Controller::gasChanged, this, [this](float v) {
@@ -100,6 +102,11 @@ Simulator::Simulator(DataModel *model, Controller *controller, QObject *parent)
         }
         m_model->setCruiseActive(m_cruiseActive);
         emit cruiseChanged();
+    });
+
+    // Удержание в полосе — включается только при работающем двигателе
+    connect(controller, &Controller::laneAssistChanged, this, [this](bool v) {
+        m_model->setLaneAssist(v && m_engineOn);
     });
 
     connect(controller, &Controller::turnLeftChanged,  m_model, &DataModel::setTurnLeft);

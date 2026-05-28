@@ -26,6 +26,7 @@ public slots:
     Q_INVOKABLE void setHighBeam(bool v);
     Q_INVOKABLE void setFogLights(bool v);
     Q_INVOKABLE void toggleCruise();
+    Q_INVOKABLE void toggleLaneAssist();
     Q_INVOKABLE void startEngine();
     Q_INVOKABLE void stopEngine();
     Q_INVOKABLE void testOilPressure();
@@ -58,6 +59,7 @@ signals:
     void highBeamChanged(bool v);
     void fogLightsChanged(bool v);
     void cruiseChanged(bool v);
+    void laneAssistChanged(bool v);
     void engineStarted();
     void engineStopped();
     void testIndicator(const QString &name, bool value);
@@ -74,5 +76,6 @@ private:
     bool  m_highBeam   = false;
     bool  m_fogLights  = false;
     bool  m_cruise     = false;
+    bool  m_laneAssist = false;
     bool m_engineRunning = false;
 };

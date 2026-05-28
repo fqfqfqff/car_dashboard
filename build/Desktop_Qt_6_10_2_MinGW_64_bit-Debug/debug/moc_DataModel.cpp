@@ -63,6 +63,7 @@ template <> constexpr inline auto DataModel::qt_create_metaobjectdata<qt_meta_ta
         "highBeamChanged",
         "fogLightsChanged",
         "cruiseActiveChanged",
+        "laneAssistChanged",
         "engineRunningChanged",
         "currentGearChanged",
         "odometerChanged",
@@ -99,6 +100,7 @@ template <> constexpr inline auto DataModel::qt_create_metaobjectdata<qt_meta_ta
         "highBeam",
         "fogLights",
         "cruiseActive",
+        "laneAssist",
         "engineRunning",
         "currentGear",
         "odometer",
@@ -153,90 +155,94 @@ template <> constexpr inline auto DataModel::qt_create_metaobjectdata<qt_meta_ta
         QtMocHelpers::SignalData<void()>(23, 2, QMC::AccessPublic, QMetaType::Void),
         // Signal 'cruiseActiveChanged'
         QtMocHelpers::SignalData<void()>(24, 2, QMC::AccessPublic, QMetaType::Void),
-        // Signal 'engineRunningChanged'
+        // Signal 'laneAssistChanged'
         QtMocHelpers::SignalData<void()>(25, 2, QMC::AccessPublic, QMetaType::Void),
-        // Signal 'currentGearChanged'
+        // Signal 'engineRunningChanged'
         QtMocHelpers::SignalData<void()>(26, 2, QMC::AccessPublic, QMetaType::Void),
-        // Signal 'odometerChanged'
+        // Signal 'currentGearChanged'
         QtMocHelpers::SignalData<void()>(27, 2, QMC::AccessPublic, QMetaType::Void),
-        // Signal 'brakeOverheatChanged'
+        // Signal 'odometerChanged'
         QtMocHelpers::SignalData<void()>(28, 2, QMC::AccessPublic, QMetaType::Void),
-        // Signal 'canConnectedChanged'
+        // Signal 'brakeOverheatChanged'
         QtMocHelpers::SignalData<void()>(29, 2, QMC::AccessPublic, QMetaType::Void),
-        // Signal 'brakeFluidChanged'
+        // Signal 'canConnectedChanged'
         QtMocHelpers::SignalData<void()>(30, 2, QMC::AccessPublic, QMetaType::Void),
-        // Signal 'transmissionFaultChanged'
+        // Signal 'brakeFluidChanged'
         QtMocHelpers::SignalData<void()>(31, 2, QMC::AccessPublic, QMetaType::Void),
-        // Signal 'transmissionOverheatChanged'
+        // Signal 'transmissionFaultChanged'
         QtMocHelpers::SignalData<void()>(32, 2, QMC::AccessPublic, QMetaType::Void),
-        // Signal 'generalWarningChanged'
+        // Signal 'transmissionOverheatChanged'
         QtMocHelpers::SignalData<void()>(33, 2, QMC::AccessPublic, QMetaType::Void),
+        // Signal 'generalWarningChanged'
+        QtMocHelpers::SignalData<void()>(34, 2, QMC::AccessPublic, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
         // property 'speed'
-        QtMocHelpers::PropertyData<double>(34, QMetaType::Double, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 0),
+        QtMocHelpers::PropertyData<double>(35, QMetaType::Double, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 0),
         // property 'rpm'
-        QtMocHelpers::PropertyData<double>(35, QMetaType::Double, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 1),
+        QtMocHelpers::PropertyData<double>(36, QMetaType::Double, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 1),
         // property 'fuelLevel'
-        QtMocHelpers::PropertyData<double>(36, QMetaType::Double, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 2),
+        QtMocHelpers::PropertyData<double>(37, QMetaType::Double, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 2),
         // property 'engineTemp'
-        QtMocHelpers::PropertyData<double>(37, QMetaType::Double, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 3),
+        QtMocHelpers::PropertyData<double>(38, QMetaType::Double, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 3),
         // property 'oilPressure'
-        QtMocHelpers::PropertyData<bool>(38, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 4),
+        QtMocHelpers::PropertyData<bool>(39, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 4),
         // property 'overheating'
-        QtMocHelpers::PropertyData<bool>(39, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 5),
+        QtMocHelpers::PropertyData<bool>(40, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 5),
         // property 'brakeSystem'
-        QtMocHelpers::PropertyData<bool>(40, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 6),
+        QtMocHelpers::PropertyData<bool>(41, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 6),
         // property 'batteryFault'
-        QtMocHelpers::PropertyData<bool>(41, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 7),
+        QtMocHelpers::PropertyData<bool>(42, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 7),
         // property 'airbagFault'
-        QtMocHelpers::PropertyData<bool>(42, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 8),
+        QtMocHelpers::PropertyData<bool>(43, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 8),
         // property 'seatbelt'
-        QtMocHelpers::PropertyData<bool>(43, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 9),
+        QtMocHelpers::PropertyData<bool>(44, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 9),
         // property 'brakeFluid'
-        QtMocHelpers::PropertyData<bool>(44, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 28),
-        // property 'transmissionFault'
         QtMocHelpers::PropertyData<bool>(45, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 29),
-        // property 'transmissionOverheat'
+        // property 'transmissionFault'
         QtMocHelpers::PropertyData<bool>(46, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 30),
+        // property 'transmissionOverheat'
+        QtMocHelpers::PropertyData<bool>(47, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 31),
         // property 'checkEngine'
-        QtMocHelpers::PropertyData<bool>(47, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 10),
+        QtMocHelpers::PropertyData<bool>(48, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 10),
         // property 'absActive'
-        QtMocHelpers::PropertyData<bool>(48, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 11),
+        QtMocHelpers::PropertyData<bool>(49, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 11),
         // property 'espActive'
-        QtMocHelpers::PropertyData<bool>(49, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 12),
+        QtMocHelpers::PropertyData<bool>(50, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 12),
         // property 'tpmsActive'
-        QtMocHelpers::PropertyData<bool>(50, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 13),
+        QtMocHelpers::PropertyData<bool>(51, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 13),
         // property 'fuelLow'
-        QtMocHelpers::PropertyData<bool>(51, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 14),
+        QtMocHelpers::PropertyData<bool>(52, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 14),
         // property 'brakeWear'
-        QtMocHelpers::PropertyData<bool>(52, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 15),
+        QtMocHelpers::PropertyData<bool>(53, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 15),
         // property 'steeringFault'
-        QtMocHelpers::PropertyData<bool>(53, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 16),
+        QtMocHelpers::PropertyData<bool>(54, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 16),
         // property 'generalWarning'
-        QtMocHelpers::PropertyData<bool>(54, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 31),
+        QtMocHelpers::PropertyData<bool>(55, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 32),
         // property 'turnLeft'
-        QtMocHelpers::PropertyData<bool>(55, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 17),
+        QtMocHelpers::PropertyData<bool>(56, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 17),
         // property 'turnRight'
-        QtMocHelpers::PropertyData<bool>(56, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 18),
+        QtMocHelpers::PropertyData<bool>(57, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 18),
         // property 'lowBeam'
-        QtMocHelpers::PropertyData<bool>(57, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 19),
+        QtMocHelpers::PropertyData<bool>(58, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 19),
         // property 'highBeam'
-        QtMocHelpers::PropertyData<bool>(58, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 20),
+        QtMocHelpers::PropertyData<bool>(59, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 20),
         // property 'fogLights'
-        QtMocHelpers::PropertyData<bool>(59, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 21),
+        QtMocHelpers::PropertyData<bool>(60, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 21),
         // property 'cruiseActive'
-        QtMocHelpers::PropertyData<bool>(60, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 22),
+        QtMocHelpers::PropertyData<bool>(61, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 22),
+        // property 'laneAssist'
+        QtMocHelpers::PropertyData<bool>(62, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 23),
         // property 'engineRunning'
-        QtMocHelpers::PropertyData<bool>(61, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 23),
+        QtMocHelpers::PropertyData<bool>(63, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 24),
         // property 'currentGear'
-        QtMocHelpers::PropertyData<int>(62, QMetaType::Int, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 24),
+        QtMocHelpers::PropertyData<int>(64, QMetaType::Int, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 25),
         // property 'odometer'
-        QtMocHelpers::PropertyData<double>(63, QMetaType::Double, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 25),
+        QtMocHelpers::PropertyData<double>(65, QMetaType::Double, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 26),
         // property 'brakeOverheat'
-        QtMocHelpers::PropertyData<bool>(64, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 26),
+        QtMocHelpers::PropertyData<bool>(66, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 27),
         // property 'canConnected'
-        QtMocHelpers::PropertyData<bool>(65, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 27),
+        QtMocHelpers::PropertyData<bool>(67, QMetaType::Bool, QMC::DefaultPropertyFlags | QMC::Writable | QMC::StdCppSet, 28),
     };
     QtMocHelpers::UintData qt_enums {
     };
@@ -281,15 +287,16 @@ void DataModel::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, v
         case 20: _t->highBeamChanged(); break;
         case 21: _t->fogLightsChanged(); break;
         case 22: _t->cruiseActiveChanged(); break;
-        case 23: _t->engineRunningChanged(); break;
-        case 24: _t->currentGearChanged(); break;
-        case 25: _t->odometerChanged(); break;
-        case 26: _t->brakeOverheatChanged(); break;
-        case 27: _t->canConnectedChanged(); break;
-        case 28: _t->brakeFluidChanged(); break;
-        case 29: _t->transmissionFaultChanged(); break;
-        case 30: _t->transmissionOverheatChanged(); break;
-        case 31: _t->generalWarningChanged(); break;
+        case 23: _t->laneAssistChanged(); break;
+        case 24: _t->engineRunningChanged(); break;
+        case 25: _t->currentGearChanged(); break;
+        case 26: _t->odometerChanged(); break;
+        case 27: _t->brakeOverheatChanged(); break;
+        case 28: _t->canConnectedChanged(); break;
+        case 29: _t->brakeFluidChanged(); break;
+        case 30: _t->transmissionFaultChanged(); break;
+        case 31: _t->transmissionOverheatChanged(); break;
+        case 32: _t->generalWarningChanged(); break;
         default: ;
         }
     }
@@ -340,23 +347,25 @@ void DataModel::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, v
             return;
         if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::cruiseActiveChanged, 22))
             return;
-        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::engineRunningChanged, 23))
+        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::laneAssistChanged, 23))
             return;
-        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::currentGearChanged, 24))
+        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::engineRunningChanged, 24))
             return;
-        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::odometerChanged, 25))
+        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::currentGearChanged, 25))
             return;
-        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::brakeOverheatChanged, 26))
+        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::odometerChanged, 26))
             return;
-        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::canConnectedChanged, 27))
+        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::brakeOverheatChanged, 27))
             return;
-        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::brakeFluidChanged, 28))
+        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::canConnectedChanged, 28))
             return;
-        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::transmissionFaultChanged, 29))
+        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::brakeFluidChanged, 29))
             return;
-        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::transmissionOverheatChanged, 30))
+        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::transmissionFaultChanged, 30))
             return;
-        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::generalWarningChanged, 31))
+        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::transmissionOverheatChanged, 31))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (DataModel::*)()>(_a, &DataModel::generalWarningChanged, 32))
             return;
     }
     if (_c == QMetaObject::ReadProperty) {
@@ -389,11 +398,12 @@ void DataModel::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, v
         case 24: *reinterpret_cast<bool*>(_v) = _t->highBeam(); break;
         case 25: *reinterpret_cast<bool*>(_v) = _t->fogLights(); break;
         case 26: *reinterpret_cast<bool*>(_v) = _t->cruiseActive(); break;
-        case 27: *reinterpret_cast<bool*>(_v) = _t->engineRunning(); break;
-        case 28: *reinterpret_cast<int*>(_v) = _t->currentGear(); break;
-        case 29: *reinterpret_cast<double*>(_v) = _t->odometer(); break;
-        case 30: *reinterpret_cast<bool*>(_v) = _t->brakeOverheat(); break;
-        case 31: *reinterpret_cast<bool*>(_v) = _t->canConnected(); break;
+        case 27: *reinterpret_cast<bool*>(_v) = _t->laneAssist(); break;
+        case 28: *reinterpret_cast<bool*>(_v) = _t->engineRunning(); break;
+        case 29: *reinterpret_cast<int*>(_v) = _t->currentGear(); break;
+        case 30: *reinterpret_cast<double*>(_v) = _t->odometer(); break;
+        case 31: *reinterpret_cast<bool*>(_v) = _t->brakeOverheat(); break;
+        case 32: *reinterpret_cast<bool*>(_v) = _t->canConnected(); break;
         default: break;
         }
     }
@@ -427,11 +437,12 @@ void DataModel::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, v
         case 24: _t->setHighBeam(*reinterpret_cast<bool*>(_v)); break;
         case 25: _t->setFogLights(*reinterpret_cast<bool*>(_v)); break;
         case 26: _t->setCruiseActive(*reinterpret_cast<bool*>(_v)); break;
-        case 27: _t->setEngineRunning(*reinterpret_cast<bool*>(_v)); break;
-        case 28: _t->setCurrentGear(*reinterpret_cast<int*>(_v)); break;
-        case 29: _t->setOdometer(*reinterpret_cast<double*>(_v)); break;
-        case 30: _t->setBrakeOverheat(*reinterpret_cast<bool*>(_v)); break;
-        case 31: _t->setCanConnected(*reinterpret_cast<bool*>(_v)); break;
+        case 27: _t->setLaneAssist(*reinterpret_cast<bool*>(_v)); break;
+        case 28: _t->setEngineRunning(*reinterpret_cast<bool*>(_v)); break;
+        case 29: _t->setCurrentGear(*reinterpret_cast<int*>(_v)); break;
+        case 30: _t->setOdometer(*reinterpret_cast<double*>(_v)); break;
+        case 31: _t->setBrakeOverheat(*reinterpret_cast<bool*>(_v)); break;
+        case 32: _t->setCanConnected(*reinterpret_cast<bool*>(_v)); break;
         default: break;
         }
     }
@@ -456,20 +467,20 @@ int DataModel::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 32)
+        if (_id < 33)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 32;
+        _id -= 33;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 32)
+        if (_id < 33)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 32;
+        _id -= 33;
     }
     if (_c == QMetaObject::ReadProperty || _c == QMetaObject::WriteProperty
             || _c == QMetaObject::ResetProperty || _c == QMetaObject::BindableProperty
             || _c == QMetaObject::RegisterPropertyMetaType) {
         qt_static_metacall(this, _c, _id, _a);
-        _id -= 32;
+        _id -= 33;
     }
     return _id;
 }
@@ -613,56 +624,62 @@ void DataModel::cruiseActiveChanged()
 }
 
 // SIGNAL 23
-void DataModel::engineRunningChanged()
+void DataModel::laneAssistChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 23, nullptr);
 }
 
 // SIGNAL 24
-void DataModel::currentGearChanged()
+void DataModel::engineRunningChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 24, nullptr);
 }
 
 // SIGNAL 25
-void DataModel::odometerChanged()
+void DataModel::currentGearChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 25, nullptr);
 }
 
 // SIGNAL 26
-void DataModel::brakeOverheatChanged()
+void DataModel::odometerChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 26, nullptr);
 }
 
 // SIGNAL 27
-void DataModel::canConnectedChanged()
+void DataModel::brakeOverheatChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 27, nullptr);
 }
 
 // SIGNAL 28
-void DataModel::brakeFluidChanged()
+void DataModel::canConnectedChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 28, nullptr);
 }
 
 // SIGNAL 29
-void DataModel::transmissionFaultChanged()
+void DataModel::brakeFluidChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 29, nullptr);
 }
 
 // SIGNAL 30
-void DataModel::transmissionOverheatChanged()
+void DataModel::transmissionFaultChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 30, nullptr);
 }
 
 // SIGNAL 31
-void DataModel::generalWarningChanged()
+void DataModel::transmissionOverheatChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 31, nullptr);
+}
+
+// SIGNAL 32
+void DataModel::generalWarningChanged()
+{
+    QMetaObject::activate(this, &staticMetaObject, 32, nullptr);
 }
 QT_WARNING_POP

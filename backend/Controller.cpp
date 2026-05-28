@@ -73,6 +73,10 @@ void Controller::toggleCruise() {
     m_cruise = !m_cruise;
     emit cruiseChanged(m_cruise);
 }
+void Controller::toggleLaneAssist() {
+    m_laneAssist = !m_laneAssist;
+    emit laneAssistChanged(m_laneAssist);
+}
 void Controller::startEngine() {
     if (m_engineRunning) return;
     m_engineRunning = true;

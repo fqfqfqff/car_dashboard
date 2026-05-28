@@ -257,9 +257,8 @@ void GaugeItem::drawTickLabels(QPainter *p, QPointF c,
     const double side       = qMin(width(), height());
     const double ringW      = outerR - innerR;
 
-    // Подписи по центру зоны делений
-    const double labelR = innerR + ringW * 0.42;
-    const double fontSize = qMax(4.0, side * 0.027);
+    const double labelR = innerR + ringW * 0.28;
+    const double fontSize = qMax(4.0, side * 0.023);
 
     for (int i = 0; i <= nMinor; i++) {
         const double frac = double(i) / double(nMinor);
@@ -267,8 +266,14 @@ void GaugeItem::drawTickLabels(QPainter *p, QPointF c,
         const int    ival = qRound(val);
 
         bool shouldLabel = false;
-        if (isTacho)  shouldLabel = (ival % 1000 == 0);
-        else          shouldLabel = (ival % 20 == 0);
+        if (isTacho) {
+            shouldLabel = (ival % 1000 == 0);
+        } else {
+            if (ival < 100)
+                shouldLabel = (ival % 20 == 0);
+            else
+                shouldLabel = ((ival - 100) % 40 == 0);
+        }
         if (!shouldLabel) continue;
 
         const double n      = normalize(val);
@@ -283,7 +288,7 @@ void GaugeItem::drawTickLabels(QPainter *p, QPointF c,
         p->setPen(DS::TEXT_SEC);   // #B0B0B0 — вторичный, не конкурирует
 
         const QString txt = isTacho
-                                ? QString::number(int(val / 1000))
+                                ? QString::number(qRound(val / 1000.0))
                                 : QString::number(ival);
 
         QFontMetricsF fm(f);
@@ -308,32 +313,66 @@ void GaugeItem::drawTickLabels(QPainter *p, QPointF c,
 // Кольцо свечения у innerR (пульсирует с оборотами)
 // Очень слабое, не броское: max alpha = 50
 // =============================================================================
+// Красная подсветка: оттенки красного, ярче с ростом оборотов
+static QColor glowRamp(double x)
+{
+    struct Stop { double p; int r, g, b; };
+    static const Stop s[] = {
+        { 0.00, 200,  44,  36 },   // тёмно-красный (низкие обороты)
+        { 0.45, 235,  54,  44 },
+        { 0.75, 255,  64,  52 },
+        { 1.00, 255,  82,  64 },   // ярко-красный (отсечка)
+    };
+    const int n = 4;
+    if (x <= s[0].p) return QColor(s[0].r, s[0].g, s[0].b);
+    for (int i = 1; i < n; ++i) {
+        if (x <= s[i].p) {
+            const double f = (x - s[i-1].p) / (s[i].p - s[i-1].p);
+            return QColor(int(s[i-1].r + (s[i].r - s[i-1].r) * f),
+                          int(s[i-1].g + (s[i].g - s[i-1].g) * f),
+                          int(s[i-1].b + (s[i].b - s[i-1].b) * f));
+        }
+    }
+    return QColor(s[n-1].r, s[n-1].g, s[n-1].b);
+}
+
 void GaugeItem::drawGlowRing(QPainter *p, QPointF c, double innerR)
 {
-    if (m_glowIntensity <= 0.01) return;
+    const double t = qBound(0.0, m_glowIntensity, 1.0);
+    if (t <= 0.01) return;
 
-    // Внешний слой: красноватое свечение у границы зоны делений
-    // Плавно нарастает через _smoothGlow в Gauge.qml (800ms InOutQuad)
-    const int alphaOuter = qRound(m_glowIntensity * 65.0);
-    QRadialGradient glowOuter(c, innerR * 1.22);
-    glowOuter.setColorAt(0.62, QColor(255, 59, 48, 0));
-    glowOuter.setColorAt(0.82, QColor(255, 59, 48, alphaOuter));
-    glowOuter.setColorAt(1.00, QColor(255, 59, 48, 0));
+    const QColor gc = glowRamp(t);
+    const int R = gc.red(), G = gc.green(), B = gc.blue();
 
     p->setPen(Qt::NoPen);
+
+    // Широкое мягкое внешнее гало — много стопов для плавного затухания
+    const double rOuter = innerR * 1.34;
+    const int aMax = qRound(t * 74.0);
+    QRadialGradient glowOuter(c, rOuter);
+    glowOuter.setColorAt(0.32, QColor(R, G, B, 0));
+    glowOuter.setColorAt(0.48, QColor(R, G, B, aMax / 6));
+    glowOuter.setColorAt(0.60, QColor(R, G, B, aMax / 3));
+    glowOuter.setColorAt(0.70, QColor(R, G, B, aMax / 2));
+    glowOuter.setColorAt(0.79, QColor(R, G, B, aMax));
+    glowOuter.setColorAt(0.87, QColor(R, G, B, aMax / 2));
+    glowOuter.setColorAt(0.94, QColor(R, G, B, aMax / 5));
+    glowOuter.setColorAt(1.00, QColor(R, G, B, 0));
     p->setBrush(glowOuter);
-    p->drawEllipse(c, innerR * 1.22, innerR * 1.22);
+    p->drawEllipse(c, rOuter, rOuter);
 
-    // Внутренний слой: тёплое свечение в центре (оранжевый оттенок, слабее)
-    // Создаёт ощущение что прибор "живёт" изнутри
-    const int alphaInner = qRound(m_glowIntensity * 28.0);
-    QRadialGradient glowInner(c, innerR * 0.90);
-    glowInner.setColorAt(0.00, QColor(255, 120, 40, alphaInner));
-    glowInner.setColorAt(0.55, QColor(255, 80,  20, alphaInner / 2));
-    glowInner.setColorAt(1.00, QColor(255, 59,  48, 0));
-
+    // Внутреннее тёплое ядро — лёгкая заливка к центру
+    const double rInner = innerR * 1.02;
+    const int aIn = qRound(t * 30.0);
+    const QColor core = gc.lighter(125);
+    QRadialGradient glowInner(c, rInner);
+    glowInner.setColorAt(0.00, QColor(core.red(), core.green(), core.blue(), aIn));
+    glowInner.setColorAt(0.35, QColor(core.red(), core.green(), core.blue(), aIn * 3 / 4));
+    glowInner.setColorAt(0.62, QColor(R, G, B, aIn / 2));
+    glowInner.setColorAt(0.82, QColor(R, G, B, aIn / 4));
+    glowInner.setColorAt(1.00, QColor(R, G, B, 0));
     p->setBrush(glowInner);
-    p->drawEllipse(c, innerR * 0.90, innerR * 0.90);
+    p->drawEllipse(c, rInner, rInner);
 }
 
 // =============================================================================
@@ -393,7 +432,7 @@ void GaugeItem::drawNeedle(QPainter *p, QPointF c,
 //   Цвет числа: по зоне (белый → жёлтый → красный)
 //   Единица: TEXT_DIM (не конкурирует с числом)
 // =============================================================================
-void GaugeItem::drawCenterText(QPainter *p, QPointF c, double innerR, double norm)
+void GaugeItem::drawCenterText(QPainter *p, QPointF c, double innerR, double /*norm*/)
 {
     const double side = qMin(width(), height());
 
@@ -425,8 +464,8 @@ void GaugeItem::drawCenterText(QPainter *p, QPointF c, double innerR, double nor
         const QString speedStr = QString::number(int(m_value));
         const bool threeDigits = (speedStr.length() >= 3);
         const double numFontSize = threeDigits
-                                       ? qMax(8.0, innerR * 0.44)   // 100+ → чуть меньше
-                                       : qMax(8.0, innerR * 0.54);  // 0–99 → исходный размер
+                                       ? qMax(8.0, innerR * 0.38)
+                                       : qMax(8.0, innerR * 0.52);
         QFont nf(FONT, numFontSize);
         nf.setWeight(QFont::Normal);
         p->setFont(nf);

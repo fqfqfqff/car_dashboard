@@ -85,6 +85,11 @@ Item {
             forceActive: dataModel.cruiseActive
             btnW: root.width * 0.048; btnH: parent.height
             onTriggered: controller.toggleCruise() }
+
+        OvBtn { label: "ПОЛОСА"; baseColor: "#0E0000"; activeColor: "#FF3B30"
+            forceActive: dataModel.laneAssist
+            btnW: root.width * 0.052; btnH: parent.height
+            onTriggered: controller.toggleLaneAssist() }
     }
 
     // ── РЯД 2: ТЕСТ-ИНДИКАТОРЫ + CAN ─────────────────────────────────────────

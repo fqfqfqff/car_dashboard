@@ -81,25 +81,24 @@ Canvas {
         ctx.strokeStyle = hlGrad
         ctx.lineWidth = 2.0; ctx.lineJoin = "round"; ctx.stroke()
 
-        // ── 6. RPM-свечение — 4 слоя (ПОВЕРХ хрома) ─────────────────────────
+        // ── 6. RPM-свечение — многослойное, диффузное, со сменой цвета ───────
+        // Цвет плавно идёт холодный синий → бирюза → янтарь → красный
         if (rpmN > 0.005) {
-            var rc = "255,59,48"
-            // Широкий атмосферный ореол
-            ctx.beginPath(); _path(ctx, r + 1)
-            ctx.strokeStyle = "rgba(" + rc + "," + (rpmN * 0.12).toFixed(3) + ")"
-            ctx.lineWidth = 28; ctx.lineJoin = "round"; ctx.stroke()
-            // Средний ореол
-            ctx.beginPath(); _path(ctx, r + 1)
-            ctx.strokeStyle = "rgba(" + rc + "," + (rpmN * 0.22).toFixed(3) + ")"
-            ctx.lineWidth = 14; ctx.lineJoin = "round"; ctx.stroke()
-            // Острый край
-            ctx.beginPath(); _path(ctx, r + 1)
-            ctx.strokeStyle = "rgba(" + rc + "," + (rpmN * 0.45).toFixed(3) + ")"
-            ctx.lineWidth = 5; ctx.lineJoin = "round"; ctx.stroke()
-            // Лазерный контур
-            ctx.beginPath(); _path(ctx, r + 1)
-            ctx.strokeStyle = "rgba(" + rc + "," + (rpmN * 0.80).toFixed(3) + ")"
-            ctx.lineWidth = 1.5; ctx.lineJoin = "round"; ctx.stroke()
+            var col = _glowColor(rpmN)
+            var rc  = col[0] + "," + col[1] + "," + col[2]
+            // Много мягких слоёв: от очень широкого/слабого до тонкого/яркого.
+            // Плавная прогрессия ширины и альфы убирает заметные переходы.
+            var layers = [
+                [46, 0.040], [38, 0.055], [30, 0.072], [23, 0.092],
+                [17, 0.120], [12, 0.160], [8, 0.230], [4.5, 0.380],
+                [2.2, 0.620], [1.2, 0.880]
+            ]
+            ctx.lineJoin = "round"; ctx.lineCap = "round"
+            for (var gi = 0; gi < layers.length; gi++) {
+                ctx.beginPath(); _path(ctx, r + 1)
+                ctx.strokeStyle = "rgba(" + rc + "," + (rpmN * layers[gi][1]).toFixed(3) + ")"
+                ctx.lineWidth = layers[gi][0]; ctx.stroke()
+            }
         }
 
         // ── 7. Внутренний shadow — глубина фаски ─────────────────────────────
@@ -133,5 +132,27 @@ Canvas {
         ctx.quadraticCurveTo(midX, botY, lCX, gCY + radius)
         ctx.arc(lCX, gCY, radius,  Math.PI / 2, -Math.PI / 2, false)
         ctx.closePath()
+    }
+
+    // Цветовая температура свечения по RPM: синий → бирюза → янтарь → красный
+    function _glowColor(t) {
+        var stops = [
+            [0.00, 200,  44,  36],
+            [0.45, 235,  54,  44],
+            [0.75, 255,  64,  52],
+            [1.00, 255,  82,  64]
+        ]
+        if (t <= stops[0][0]) return [stops[0][1], stops[0][2], stops[0][3]]
+        for (var i = 1; i < stops.length; i++) {
+            if (t <= stops[i][0]) {
+                var f = (t - stops[i-1][0]) / (stops[i][0] - stops[i-1][0])
+                return [
+                    Math.round(stops[i-1][1] + (stops[i][1] - stops[i-1][1]) * f),
+                    Math.round(stops[i-1][2] + (stops[i][2] - stops[i-1][2]) * f),
+                    Math.round(stops[i-1][3] + (stops[i][3] - stops[i-1][3]) * f)
+                ]
+            }
+        }
+        return [stops[stops.length-1][1], stops[stops.length-1][2], stops[stops.length-1][3]]
     }
 }

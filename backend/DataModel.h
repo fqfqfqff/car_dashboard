@@ -38,6 +38,7 @@ class DataModel : public QObject
     Q_PROPERTY(bool highBeam     READ highBeam     WRITE setHighBeam     NOTIFY highBeamChanged)
     Q_PROPERTY(bool fogLights    READ fogLights    WRITE setFogLights    NOTIFY fogLightsChanged)
     Q_PROPERTY(bool cruiseActive READ cruiseActive WRITE setCruiseActive NOTIFY cruiseActiveChanged)
+    Q_PROPERTY(bool laneAssist   READ laneAssist   WRITE setLaneAssist   NOTIFY laneAssistChanged)
     Q_PROPERTY(bool engineRunning READ engineRunning WRITE setEngineRunning NOTIFY engineRunningChanged)
     Q_PROPERTY(int currentGear READ currentGear WRITE setCurrentGear NOTIFY currentGearChanged)
     Q_PROPERTY(double odometer READ odometer WRITE setOdometer NOTIFY odometerChanged)
@@ -76,6 +77,7 @@ public:
     bool highBeam()      const { return m_highBeam; }
     bool fogLights()     const { return m_fogLights; }
     bool cruiseActive()  const { return m_cruiseActive; }
+    bool laneAssist()    const { return m_laneAssist; }
     bool engineRunning() const { return m_engineRunning; }
     bool brakeFluid()        const { return m_brakeFluid; }
     bool transmissionFault() const { return m_transmissionFault; }
@@ -112,6 +114,7 @@ public:
     void setHighBeam(bool v);
     void setFogLights(bool v);
     void setCruiseActive(bool v);
+    void setLaneAssist(bool v);
     void setBrakeFluid(bool v);
     void setTransmissionFault(bool v);
     void setTransmissionOverheat(bool v);
@@ -141,6 +144,7 @@ signals:
     void highBeamChanged();
     void fogLightsChanged();
     void cruiseActiveChanged();
+    void laneAssistChanged();
     void engineRunningChanged();
     void currentGearChanged();
     void odometerChanged();
@@ -181,6 +185,7 @@ private:
     bool m_highBeam      = false;
     bool m_fogLights     = false;
     bool m_cruiseActive  = false;
+    bool m_laneAssist    = false;
     bool m_engineRunning = false;
     bool m_brakeFluid = false;
     bool m_transmissionFault = false;

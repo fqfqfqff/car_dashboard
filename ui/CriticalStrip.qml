@@ -38,19 +38,19 @@ Item {
     // Остальные критические гасятся после запуска двигателя при отсутствии ошибок.
     // iconScale: индивидуальный масштаб иконки внутри ячейки (1.0 = стандарт)
     readonly property var allItems: [
-        { icon: "qrc:/assets/icons/red_handbrake.png",                          active: false,                           level: "critical", iconScale: 0.7, alwaysShow: false },
-        { icon: "qrc:/assets/icons/red_low_battery.png",                        active: dataModel.batteryFault,          level: "critical", iconScale: 0.7, alwaysShow: false },
-        { icon: "qrc:/assets/icons/red_brake_fluid.png",                        active: dataModel.brakeFluid,            level: "critical", iconScale: 0.7, alwaysShow: false },
+        { icon: "qrc:/assets/icons/red_handbrake.png",                          active: false,                           level: "critical", iconScale: 0.85, alwaysShow: false },
+        { icon: "qrc:/assets/icons/red_low_battery.png",                        active: dataModel.batteryFault,          level: "critical", iconScale: 0.85, alwaysShow: false },
+        { icon: "qrc:/assets/icons/red_brake_fluid.png",                        active: dataModel.brakeFluid,            level: "critical", iconScale: 0.85, alwaysShow: false },
         { icon: "qrc:/assets/icons/red_engine_oil_level.png",                   active: dataModel.oilPressure,           level: "critical", iconScale: 0.85, alwaysShow: false },
-        { icon: "qrc:/assets/icons/red_engine_overheating.png",                 active: dataModel.overheating,           level: "critical", iconScale: 0.6, alwaysShow: false },
+        { icon: "qrc:/assets/icons/red_engine_overheating.png",                 active: dataModel.overheating,           level: "critical", iconScale: 0.85, alwaysShow: false },
         { icon: "qrc:/assets/icons/red_brake.png",                              active: dataModel.brakeSystem,           level: "critical", iconScale: 0.85, alwaysShow: false },
-        { icon: "qrc:/assets/icons/red_seatbelt.png",                           active: dataModel.seatbelt,              level: "critical", iconScale: 0.55, alwaysShow: false },
-        { icon: "qrc:/assets/icons/red_problems_airbags.png",                   active: dataModel.airbagFault,           level: "critical", iconScale: 0.5, alwaysShow: false },
-        { icon: "qrc:/assets/icons/red_automatic_transmission.png",             active: dataModel.transmissionFault,     level: "critical", iconScale: 0.7, alwaysShow: false },
-        { icon: "qrc:/assets/icons/red_automatic_transmission_overheating.png", active: dataModel.transmissionOverheat,  level: "critical", iconScale: 0.7, alwaysShow: false },
-        { icon: "qrc:/assets/icons/red_power_steering.png",                     active: dataModel.steeringFault,         level: "critical", iconScale: 0.7, alwaysShow: false },
-        { icon: "qrc:/assets/icons/red_problems_alarm.png",                     active: dataModel.generalWarning,        level: "critical", iconScale: 0.7, alwaysShow: false },
-        { icon: "qrc:/assets/icons/red_triangle.png",                           active: dataModel.generalWarning,        level: "critical", iconScale: 0.7, alwaysShow: false }
+        { icon: "qrc:/assets/icons/red_seatbelt.png",                           active: dataModel.seatbelt,              level: "critical", iconScale: 0.80, alwaysShow: false },
+        { icon: "qrc:/assets/icons/red_problems_airbags.png",                   active: dataModel.airbagFault,           level: "critical", iconScale: 0.80, alwaysShow: false },
+        { icon: "qrc:/assets/icons/red_automatic_transmission.png",             active: dataModel.transmissionFault,     level: "critical", iconScale: 0.85, alwaysShow: false },
+        { icon: "qrc:/assets/icons/red_automatic_transmission_overheating.png", active: dataModel.transmissionOverheat,  level: "critical", iconScale: 0.85, alwaysShow: false },
+        { icon: "qrc:/assets/icons/red_power_steering.png",                     active: dataModel.steeringFault,         level: "critical", iconScale: 0.85, alwaysShow: false },
+        { icon: "qrc:/assets/icons/red_problems_alarm.png",                     active: dataModel.generalWarning,        level: "critical", iconScale: 0.85, alwaysShow: false },
+        { icon: "qrc:/assets/icons/red_triangle.png",                           active: dataModel.generalWarning,        level: "critical", iconScale: 0.85, alwaysShow: false }
     ]
 
     // Вычисляем что показывать для каждого слота:
@@ -110,8 +110,7 @@ Item {
             readonly property int rowCount_: Math.min(iconsPerRow, visibleItems.length - row_ * iconsPerRow)
             readonly property real rowStartX: (root.width - rowCount_ * cellW) / 2.0
             readonly property real targetX:   rowStartX + col * cellW + (cellW - iconSz) / 2
-            readonly property real topOffset: 120
-            readonly property real targetY:   row_ * cellH + (cellH - iconSz) / 2 + topOffset
+            readonly property real targetY:   row_ * cellH + (cellH - iconSz) / 2
 
             width:  iconSz
             height: iconSz
