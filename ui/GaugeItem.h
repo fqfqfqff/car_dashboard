@@ -29,6 +29,7 @@
 
 #include <QQuickPaintedItem>
 #include <QPainter>
+#include <QImage>
 
 class GaugeItem : public QQuickPaintedItem
 {
@@ -74,15 +75,17 @@ public:
     bool    dangerBlink()   const { return m_dangerBlink; }
 
     void setValue(double v);
-    void setMinValue(double v)        { m_minValue = v;  emit minValueChanged();  update(); }
-    void setMaxValue(double v)        { m_maxValue = v;  emit maxValueChanged();  update(); }
-    void setStep(double v)            { m_step = v;      emit stepChanged();      update(); }
+    // Изменение диапазона/шага инвалидирует кэш статического слоя (деления+подписи)
+    void setMinValue(double v)        { m_minValue = v;  m_staticDirty = true; emit minValueChanged();  update(); }
+    void setMaxValue(double v)        { m_maxValue = v;  m_staticDirty = true; emit maxValueChanged();  update(); }
+    void setStep(double v)            { m_step = v;      m_staticDirty = true; emit stepChanged();      update(); }
     void setArcColor(const QColor &v) { m_arcColor = v;  emit arcColorChanged();  update(); }
     void setDangerZone(double v)      { m_dangerZone = v; emit dangerZoneChanged(); update(); }
     void setUnit(const QString &v)    { m_unit = v;      emit unitChanged();      update(); }
-    void setCenterText(const QString &v){ m_centerText = v; emit centerTextChanged(); update(); }
-    void setGlowIntensity(double v)   { m_glowIntensity = v; emit glowIntensityChanged(); update(); }
-    void setDangerBlink(bool v)       { m_dangerBlink = v; emit dangerBlinkChanged(); update(); }
+    void setCenterText(const QString &v){ if (m_centerText == v) return; m_centerText = v; emit centerTextChanged(); update(); }
+    // Свечение: пропускаем неощутимые изменения, чтобы не плодить перерисовки
+    void setGlowIntensity(double v)   { if (qAbs(m_glowIntensity - v) < 0.004) return; m_glowIntensity = v; emit glowIntensityChanged(); update(); }
+    void setDangerBlink(bool v)       { if (m_dangerBlink == v) return; m_dangerBlink = v; emit dangerBlinkChanged(); update(); }
 
 signals:
     void valueChanged();
@@ -130,4 +133,10 @@ private:
     QString m_centerText;
     double  m_glowIntensity = 0.0;
     bool    m_dangerBlink   = false;
+
+    // Кэш статического слоя: фон + деления + подписи.
+    // Перерисовывается только при изменении размера или диапазона/шага,
+    // а не на каждый кадр (игла/дуга/свечение/передача рисуются поверх).
+    QImage  m_staticLayer;
+    bool    m_staticDirty   = true;
 };
